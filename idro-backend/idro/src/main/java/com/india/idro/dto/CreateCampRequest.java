@@ -1,0 +1,39 @@
+package com.india.idro.dto;
+
+import com.india.idro.model.Stock;
+import com.india.idro.model.enums.CampStatus;
+import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateCampRequest {
+
+    @NotBlank(message = "Camp name is required")
+    private String name;
+
+    @NotNull(message = "Camp status is required")
+    private CampStatus status;
+
+    @NotNull(message = "Urgency score is required")
+    @Min(value = 0, message = "Urgency score must be between 0 and 100")
+    @Max(value = 100, message = "Urgency score must be between 0 and 100")
+    private Integer urgencyScore;
+
+    @NotNull(message = "Population is required")
+    @Min(value = 0, message = "Population must be positive")
+    private Integer population;
+
+    private Stock stock;
+
+    private String incomingAid;
+
+    private String image;
+
+    private Double latitude;
+
+    private Double longitude;
+}

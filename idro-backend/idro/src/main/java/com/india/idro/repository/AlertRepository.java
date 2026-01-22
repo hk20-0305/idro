@@ -8,10 +8,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+// ✅ EXTENDS MongoRepository<Alert, String> -> This is the CRITICAL part for MongoDB
 @Repository
 public interface AlertRepository extends MongoRepository<Alert, String> {
 
-    // Custom query methods - Spring generates implementation automatically
+    // --- Custom Queries (Spring Data Auto-Implements These) ---
 
     // Find alerts by type (e.g., EARTHQUAKE, FLOOD)
     List<Alert> findByType(AlertType type);

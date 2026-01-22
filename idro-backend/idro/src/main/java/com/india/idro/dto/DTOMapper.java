@@ -1,71 +1,78 @@
 package com.india.idro.dto;
 
 import com.india.idro.model.Alert;
+import com.india.idro.model.enums.AlertColor;
+import com.india.idro.model.enums.AlertType;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DTOMapper {
 
-    // Convert Entity (DB) -> DTO (Frontend)
-    public AlertDTO toDTO(Alert alert) {
+    // Database (Enum) -> Frontend (String)
+    public AlertDTO toAlertDTO(Alert alert) {
+        if (alert == null) return null;
+
         AlertDTO dto = new AlertDTO();
         dto.setId(alert.getId());
-        
-        // ✅ Fix: Convert String to Enum safely
-        try {
-            dto.setType(AlertType.valueOf(alert.getType()));
-        } catch (Exception e) {
-            dto.setType(AlertType.OTHER); // Fallback if type doesn't match
+
+        // Convert Enum to String safely
+        if (alert.getType() != null) {
+            dto.setType(alert.getType().name());
+        }
+
+        if (alert.getColor() != null) {
+            dto.setColor(alert.getColor().name());
         }
 
         dto.setLocation(alert.getLocation());
-        
-        // ✅ Fix: Handle potential nulls for magnitude/impact
-        dto.setMagnitude(alert.getMagnitude() != null ? alert.getMagnitude() : "N/A");
-        dto.setImpact(alert.getImpact() != null ? alert.getImpact() : "Unknown");
-        dto.setTime(alert.getTime() != null ? alert.getTime() : alert.getCreatedAt());
-
-        dto.setDescription(alert.getDetails());
-
-        // ✅ Fix: Convert String to Enum safely
-        try {
-            dto.setColor(AlertColor.valueOf(alert.getColor()));
-        } catch (Exception e) {
-            dto.setColor(AlertColor.RED); // Default
-        }
-        
         dto.setLatitude(alert.getLatitude());
         dto.setLongitude(alert.getLongitude());
-        
+        dto.setMagnitude(alert.getMagnitude());
+        dto.setImpact(alert.getImpact());
+        dto.setDetails(alert.getDetails());
+        dto.setTime(alert.getTime());
+        dto.setMissionStatus(alert.getMissionStatus());
+        dto.setTrustScore(alert.getTrustScore());
+        dto.setSourceType(alert.getSourceType());
+
         return dto;
     }
 
-    // Convert DTO (Frontend) -> Entity (DB)
-    public Alert toEntity(AlertDTO dto) {
+    // Frontend (String) -> Database (Enum)
+    public Alert toAlertEntity(AlertDTO dto) {
+        if (dto == null) return null;
+
         Alert alert = new Alert();
         alert.setId(dto.getId());
-        
-        // ✅ Fix: Convert Enum to String (.name())
-        if (dto.getType() != null) {
-            alert.setType(dto.getType().name());
+
+        // Convert String to Enum safely
+        try {
+            if (dto.getType() != null) {
+                alert.setType(AlertType.valueOf(dto.getType().toUpperCase()));
+            }
+        } catch (IllegalArgumentException e) {
+            alert.setType(AlertType.FLOOD); // Default fallback
+        }
+
+        try {
+            if (dto.getColor() != null) {
+                alert.setColor(AlertColor.valueOf(dto.getColor().toUpperCase()));
+            }
+        } catch (IllegalArgumentException e) {
+            alert.setColor(AlertColor.RED); // Default fallback
         }
 
         alert.setLocation(dto.getLocation());
-        alert.setMagnitude(dto.getMagnitude());
-        alert.setImpact(dto.getImpact());
-        
-        // ✅ Fix: Convert Enum to String
-        if (dto.getColor() != null) {
-            alert.setColor(dto.getColor().name());
-        } else {
-            alert.setColor("RED");
-        }
-
-        alert.setTime(dto.getTime());
-        alert.setDetails(dto.getDescription());
         alert.setLatitude(dto.getLatitude());
         alert.setLongitude(dto.getLongitude());
-        
+        alert.setMagnitude(dto.getMagnitude());
+        alert.setImpact(dto.getImpact());
+        alert.setDetails(dto.getDetails());
+        alert.setTime(dto.getTime());
+        alert.setMissionStatus(dto.getMissionStatus());
+        alert.setTrustScore(dto.getTrustScore());
+        alert.setSourceType(dto.getSourceType());
+
         return alert;
     }
 }

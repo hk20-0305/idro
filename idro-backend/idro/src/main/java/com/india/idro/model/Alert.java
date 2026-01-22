@@ -1,33 +1,90 @@
 package com.india.idro.model;
 
+import com.india.idro.model.enums.AlertColor;
+import com.india.idro.model.enums.AlertType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import lombok.Data;
+import java.time.LocalDateTime;
 
-@Data
 @Document(collection = "alerts")
 public class Alert {
+
     @Id
     private String id;
-    private String type;           // Fire, Flood, etc.
+
+    private AlertType type;
+    private AlertColor color;
     private String location;
+    private Double latitude;
+    private Double longitude;
+    private String magnitude;
+    private String impact;
     private String details;
-    private String color;          // RED, ORANGE, GREEN
+    private String time;
+    private String missionStatus;
+    private int trustScore;
+    private String reporterLevel;
+    private String sourceType;
+    private int affectedCount;
+    private int injuredCount;
+    private LocalDateTime createdAt;
     
-    // ✅ MISSING FIELDS ADDED HERE
-    private String magnitude;      // e.g. "7.2"
-    private String impact;         // e.g. "Critical"
-    private String time;           // e.g. "10:30 AM"
+    // ✅ ADDED MISSING FIELD
+    private String responderName; 
 
-    private double latitude;
-    private double longitude;
-    
-    private String missionStatus;   // OPEN, ASSIGNED
-    private String responderName;   // Who accepted it
-    private String createdAt;
+    // --- GETTERS AND SETTERS ---
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-    // TRUST SYSTEM FIELDS
-    private int trustScore;         
-    private String reporterLevel;   
-    private String sourceType;      
+    public AlertType getType() { return type; }
+    public void setType(AlertType type) { this.type = type; }
+
+    public AlertColor getColor() { return color; }
+    public void setColor(AlertColor color) { this.color = color; }
+
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    public String getMagnitude() { return magnitude; }
+    public void setMagnitude(String magnitude) { this.magnitude = magnitude; }
+
+    public String getImpact() { return impact; }
+    public void setImpact(String impact) { this.impact = impact; }
+
+    public String getDetails() { return details; }
+    public void setDetails(String details) { this.details = details; }
+
+    public String getTime() { return time; }
+    public void setTime(String time) { this.time = time; }
+
+    public String getMissionStatus() { return missionStatus; }
+    public void setMissionStatus(String missionStatus) { this.missionStatus = missionStatus; }
+
+    public int getTrustScore() { return trustScore; }
+    public void setTrustScore(int trustScore) { this.trustScore = trustScore; }
+
+    public String getReporterLevel() { return reporterLevel; }
+    public void setReporterLevel(String reporterLevel) { this.reporterLevel = reporterLevel; }
+
+    public String getSourceType() { return sourceType; }
+    public void setSourceType(String sourceType) { this.sourceType = sourceType; }
+
+    public int getAffectedCount() { return affectedCount; }
+    public void setAffectedCount(int affectedCount) { this.affectedCount = affectedCount; }
+
+    public int getInjuredCount() { return injuredCount; }
+    public void setInjuredCount(int injuredCount) { this.injuredCount = injuredCount; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    // ✅ ADDED MISSING GETTER/SETTER
+    public String getResponderName() { return responderName; }
+    public void setResponderName(String responderName) { this.responderName = responderName; }
 }

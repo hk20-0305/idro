@@ -1,7 +1,6 @@
 package com.india.idro.repository;
 
 import com.india.idro.model.Action;
-import com.india.idro.model.enums.UserRole;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,8 +10,8 @@ import java.util.List;
 @Repository
 public interface ActionRepository extends MongoRepository<Action, String> {
 
-    // Find actions by role (GOV, NGO, VOLUNTEER)
-    List<Action> findByRole(UserRole role);
+    // ✅ FIXED: Changed UserRole to String to match Model
+    List<Action> findByRole(String role);
 
     // Find actions by target zone
     List<Action> findByTargetZone(String targetZone);
@@ -20,11 +19,12 @@ public interface ActionRepository extends MongoRepository<Action, String> {
     // Find actions by target zone containing keyword
     List<Action> findByTargetZoneContainingIgnoreCase(String keyword);
 
-    // Find high priority actions
-    List<Action> findByPriorityTrue();
+    // ✅ FIXED: Changed 'True' to 'Priority' (String match)
+    // Now you can call findByPriority("HIGH")
+    List<Action> findByPriority(String priority);
 
-    // Find actions by role and priority
-    List<Action> findByRoleAndPriority(UserRole role, Boolean priority);
+    // ✅ FIXED: Changed inputs to String to match Model
+    List<Action> findByRoleAndPriority(String role, String priority);
 
     // Find all actions ordered by timestamp (newest first)
     List<Action> findAllByOrderByTimestampDesc();
@@ -32,14 +32,17 @@ public interface ActionRepository extends MongoRepository<Action, String> {
     // Find actions created after a specific date
     List<Action> findByTimestampAfter(LocalDateTime timestamp);
 
-    // Find actions by user ID (for future use when auth is implemented)
+    // ✅ FIXED: This now works because we added 'userId' to Action.java
     List<Action> findByUserId(String userId);
 
-    // Find recent high priority actions (last 24 hours)
+    // Find actions linked to a specific Alert (Essential for your app)
+    List<Action> findByAlertId(String alertId);
+
+    // ✅ FIXED: Updated logic to check for "HIGH" string instead of boolean
     default List<Action> findRecentPriorityActions() {
         LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
         return findByTimestampAfter(yesterday).stream()
-                .filter(Action::getPriority)
+                .filter(a -> "HIGH".equalsIgnoreCase(a.getPriority())) // Checks for "HIGH" text
                 .toList();
     }
 }

@@ -10,39 +10,39 @@ import java.util.List;
 @Repository
 public interface ActionRepository extends MongoRepository<Action, String> {
 
-    // ✅ FIXED: Changed UserRole to String to match Model
+    // Find by role (VOLUNTEER, NGO, GOV)
     List<Action> findByRole(String role);
 
     // Find actions by target zone
     List<Action> findByTargetZone(String targetZone);
 
-    // Find actions by target zone containing keyword
+    // Search by zone keyword
     List<Action> findByTargetZoneContainingIgnoreCase(String keyword);
 
-    // ✅ FIXED: Changed 'True' to 'Priority' (String match)
-    // Now you can call findByPriority("HIGH")
+    // Priority-based (HIGH / LOW)
     List<Action> findByPriority(String priority);
 
-    // ✅ FIXED: Changed inputs to String to match Model
+    // Filter by role + priority
     List<Action> findByRoleAndPriority(String role, String priority);
 
-    // Find all actions ordered by timestamp (newest first)
+    // Latest actions first
     List<Action> findAllByOrderByTimestampDesc();
 
-    // Find actions created after a specific date
+    // Actions after specific time
     List<Action> findByTimestampAfter(LocalDateTime timestamp);
 
-    // ✅ FIXED: This now works because we added 'userId' to Action.java
+    // Actions created by a specific user
     List<Action> findByUserId(String userId);
 
-    // Find actions linked to a specific Alert (Essential for your app)
+    // All actions related to a disaster
     List<Action> findByAlertId(String alertId);
 
-    // ✅ FIXED: Updated logic to check for "HIGH" string instead of boolean
+    // Smart query: High priority in last 24h
     default List<Action> findRecentPriorityActions() {
         LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
-        return findByTimestampAfter(yesterday).stream()
-                .filter(a -> "HIGH".equalsIgnoreCase(a.getPriority())) // Checks for "HIGH" text
+        return findByTimestampAfter(yesterday)
+                .stream()
+                .filter(a -> "HIGH".equalsIgnoreCase(a.getPriority()))
                 .toList();
     }
 }

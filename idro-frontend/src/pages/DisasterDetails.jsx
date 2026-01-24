@@ -1,7 +1,7 @@
+import { AlertTriangle, ArrowLeft, MapPin, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { idroApi } from "../services/api"; // Import Real API
-import { ArrowLeft, Activity, MapPin, Users, AlertTriangle } from "lucide-react";
 
 export default function DisasterDetails() {
   const { id } = useParams();
@@ -13,8 +13,8 @@ export default function DisasterDetails() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // We use getAlerts() and find the specific one. 
-        // Ideally, you'd make a specific endpoint like idroApi.getAlertById(id), 
+        // We use getAlerts() and find the specific one.
+        // Ideally, you'd make a specific endpoint like idroApi.getAlertById(id),
         // but fetching all works for now since the list is small.
         const res = await idroApi.getAlerts();
         const found = res.data.find(d => d.id === id);

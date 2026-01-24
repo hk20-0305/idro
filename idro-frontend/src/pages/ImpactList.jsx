@@ -10,25 +10,30 @@ export default function ImpactList() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchDisasters = async () => {
-      try {
-        setLoading(true);
-        // 1. Fetch Real Data from Backend
-        const res = await idroApi.getAlerts();
-        
-        // 2. Filter for OPEN missions only
-        const active = res.data.filter(d => d.missionStatus === 'OPEN');
-        setDisasters(active);
-        setError(null); // Clear errors on success
-      } catch (err) {
-        console.error("Failed to load impact list", err);
-        setError("⚠ UNABLE TO CONNECT TO SERVER. Is Backend Running?"); // ✅ Set Error Message
-      } finally {
-        setLoading(false); // ✅ This ensures loading always stops
-      }
-    };
-    fetchDisasters();
-  }, []);
+  const fetchDisasters = async () => {
+    try {
+      setLoading(true);
+      const res = await idroApi.getAlerts();
+      const active = res.data.filter(d => d.missionStatus === 'OPEN');
+      setDisasters(active);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to load impact list", err);
+      setError("⚠ UNABLE TO CONNECT TO SERVER. Is Backend Running?");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchDisasters(); // first load
+
+  const interval = setInterval(() => {
+    fetchDisasters(); // auto refresh every 3 seconds
+  }, 3000);
+
+  return () => clearInterval(interval); // cleanup
+}, []);
+
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-white p-8 font-sans">

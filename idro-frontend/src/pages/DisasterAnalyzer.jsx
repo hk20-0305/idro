@@ -1,41 +1,61 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { idroApi } from "../services/api"; // ✅ Import Real API
 import { ArrowLeft, Cpu, XCircle } from "lucide-react"; // Added missing icons for loading/error states
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { idroApi } from "../services/api"; // ✅ Import Real API
 
 export default function DisasterAnalyzer() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [disaster, setDisaster] = useState(null);
-  const [impactData, setImpactData] = useState(null);
+ const [impactData, setImpactData] = useState(null);
+const [camps, setCamps] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // 1. Fetch Alert Details
-        const alertsRes = await idroApi.getAlerts();
-        const found = alertsRes.data.find(d => String(d.id) === id);
-        
-        if (!found) throw new Error("Disaster not found");
-        setDisaster(found);
+      // 1. Fetch Alerts
+      const alertsRes = await idroApi.getAlerts();
+     const found = alertsRes.data
+  .filter(d => String(d.id) === id)
+  .sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0))[0];
 
-        // 2. Fetch AI Impact Data
-        const impactRes = await idroApi.getImpact(found.id);
-        setImpactData(impactRes.data);
 
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load analysis. Check Backend.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id]);
+      if (!found) throw new Error("Disaster not found");
+      setDisaster(found);
+// 2. Fetch Camps linked to this alert
+const campRes = await idroApi.getCamps();
+
+const relatedCamps = campRes.data.filter(
+  c => !c.alertId || String(c.alertId) === String(id)
+);
+
+setCamps(relatedCamps);
+
+      // 3. Generate AI values from REAL data
+      // setImpactData({
+      //   foodPerDay: found.affectedCount * 3,
+      //   waterPerDay: found.affectedCount * 4,
+      //   ambulances: Math.ceil(found.affectedCount / 150),
+      //   medicalTeams: Math.ceil(found.injuredCount / 50),
+      //   shelterShortfall: 0,
+      //   rescueBoats: found.type === "FLOOD" ? 2 : 0
+      // });
+
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Failed to load analysis.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [id]);
+
 
   // --- LOADING STATE ---
   if (loading) return (
@@ -57,22 +77,45 @@ export default function DisasterAnalyzer() {
   // ✅ Maps Backend Data to your UI Format
   // Note: Since 'camps' aren't fully structured in the backend DB yet, we default to []
   // But we use the REAL Backend AI totals for the summary.
-  const camps = []; 
 
   // AI calculations (Preserved your logic for camps, though array is empty for now)
-  const campAnalysis = camps.map(camp => {
-    const people = Number(camp.people || 0);
-    const capacity = Number(camp.capacity || 0);
+const campAnalysis = camps
+  // 1. Only allow A, B, C
+  .filter(c => ["A", "B", "C"].includes(c.name))
+
+  // 2. Remove duplicates by name (keep first occurrence)
+  .filter((camp, index, self) =>
+    index === self.findIndex(c => c.name === camp.name)
+  )
+
+  // 3. Map into UI format
+  .map(camp => {
+    const people = Number(camp.population || 0);
+
+    const needs = camp.stock
+      ? Object.entries(camp.stock)
+          .filter(([_, v]) => v === "Low")
+          .map(([k]) => k)
+      : [];
 
     return {
-      ...camp,
+      name: camp.name,
+      location: camp.location || "Location",
+      people,
+      capacity: people,
+      needs,
       food: people * 3,
       water: people * 4,
       doctors: Math.ceil(people / 200),
       ambulances: Math.ceil(people / 150),
-      critical: capacity > 0 && people > capacity * 0.9
+      critical: false
     };
   });
+
+
+
+const campsToRender = campAnalysis.length > 0 ? campAnalysis : [{}, {}, {}];
+
 
   // ✅ USE REAL BACKEND AI VALUES FOR TOTALS
   const totalFood = impactData ? impactData.foodPerDay : 0;
@@ -113,15 +156,12 @@ export default function DisasterAnalyzer() {
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Camp-wise AI Analysis</h2>
 
-        {/* Note: This grid will be empty until we add Camp Table to DB, but structure is preserved */}
-        {campAnalysis.length === 0 && (
-            <div className="p-10 border border-dashed border-white/10 rounded-xl text-center text-slate-500">
-                No individual camp data uplinked yet. Using Satellite Aggregates below.
-            </div>
-        )}
+        {/* Show message when no camps are available */}
+        
 
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {campAnalysis.map((camp, i) => (
+       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+  {campsToRender.map((camp, i) => (
+
             <div
               key={i}
               className={`rounded-xl border p-6 space-y-4 ${
@@ -132,24 +172,26 @@ export default function DisasterAnalyzer() {
             >
               {/* Camp Header */}
               <div>
-                <h3 className="text-lg font-bold">{camp.name}</h3>
+<h3 className="text-lg font-bold">
+  {camp.name || `Camp ${String.fromCharCode(65 + i)}`}
+</h3>
                 <p className="text-xs text-slate-400">{camp.location}</p>
               </div>
 
               {/* Camp Stats */}
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <Stat label="People" value={`${camp.people}/${camp.capacity}`} />
-                <Stat label="Doctors" value={camp.doctors} />
-                <Stat label="Ambulances" value={camp.ambulances} />
-                <Stat label="Food/day" value={camp.food} />
-                <Stat label="Water/day" value={`${camp.water} L`} />
-              </div>
+                <Stat label="People" value={camp.people ? `${camp.people}/${camp.capacity || 0}` : "—"} />
+<Stat label="Doctors" value={camp.doctors ?? "—"} />
+<Stat label="Ambulances" value={camp.ambulances ?? "—"} />
+<Stat label="Food/day" value={camp.food ?? "—"} />
+<Stat label="Water/day" value={camp.water ? `${camp.water} L` : "—"} />
 
+              </div>
               {/* Requirements */}
               <div>
                 <p className="text-xs text-slate-400 mb-2">Camp Requirements</p>
                 <div className="flex flex-wrap gap-2">
-                  {camp.needs.map((n, idx) => (
+{(camp.needs || []).map((n, idx) => (
                     <span
                       key={idx}
                       className="px-3 py-1 text-xs bg-blue-900/40 border border-blue-500/30 rounded-full"

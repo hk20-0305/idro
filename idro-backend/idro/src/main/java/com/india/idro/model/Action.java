@@ -10,7 +10,7 @@ public class Action {
     @Id
     private String id;
     private String alertId;
-    
+
     // ✅ ADDED THIS TO FIX 'findByUserId' ERROR
     private String userId; 
 

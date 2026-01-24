@@ -10,16 +10,16 @@ spring:
   application:
     name: idro
 
-  # MongoDB Configuration
   data:
     mongodb:
-      # For Local MongoDB Compass
       uri: mongodb://localhost:27017/idro_db
-      # OR for MongoDB Atlas (Cloud), use this format:
-      # uri: mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/idro_db
-
       database: idro_db
       auto-index-creation: true
+
+# NASA API
+nasa:
+  api:
+    key: eyJ0eXAiOiJKV1QiLCJvcmlnaW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ...
 
 # API Documentation (Swagger)
 springdoc:
@@ -35,3 +35,8 @@ logging:
     root: INFO
     com.india.idro: DEBUG
     org.springframework.data.mongodb: DEBUG
+
+
+gemini:
+  api:
+    key: AIzaSyANZs4InPva-dOW9qHRwDinsyUm2RAK3n0

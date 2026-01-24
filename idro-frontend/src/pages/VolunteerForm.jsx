@@ -1,29 +1,25 @@
-import { useState, useEffect } from "react";
-import { idroApi } from "../services/api"; // Import the real API
+import { useEffect, useState } from "react";
+import { idroApi } from "../services/api";
 
 export default function VolunteerForm() {
-  // 1. Store the list of Active Satellite Alerts for the Dropdown
   const [activeAlerts, setActiveAlerts] = useState([]);
-  
-  // NEW: Store the ID of the selected alert to UPDATE it instead of creating a new one
-  const [selectedAlertId, setSelectedAlertId] = useState(null); 
+  const [selectedAlertId, setSelectedAlertId] = useState(null);
 
   const [form, setForm] = useState({
-    location: "",      
-    type: "",          // Now auto-selected!
+    location: "",
+    type: "",
     severity: "",
     urgency: "",
-    affectedCount: "", 
-    injuredCount: "",  
+    affectedCount: "",
+    injuredCount: "",
     missing: "",
     verifiedBy: "",
-    infra: [],         
-    needs: []          
+    infra: [],
+    needs: []
   });
 
   const [camps, setCamps] = useState([]);
 
-  // 2. Options Lists (Preserved)
   const infraOptions = [
     "Roads Blocked",
     "Bridge Collapse",
@@ -33,64 +29,82 @@ export default function VolunteerForm() {
   ];
 
   const needsOptions = [
-    "Food",
-    "Water",
-    "Medicines",
-    "Shelter",
-    "Ambulance",
-    "NDRF",
-    "Evacuation",
-    "Helicopter"
+    "Food", "Water", "Medicines", "Shelter", "Ambulance",
+    "NDRF", "Evacuation", "Helicopter"
   ];
 
   const campNeeds = [
-    "Food",
-    "Water",
-    "Medicines",
-    "Beds",
-    "Blankets",
-    "Electricity",
-    "Toilets",
-    "Ambulance",
-    "Volunteers"
+    "Food", "Water", "Medicines", "Beds", "Blankets",
+    "Electricity", "Toilets", "Ambulance", "Volunteers"
   ];
 
-  // 3. ON LOAD: Fetch Real-Time Satellite Data
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        const response = await idroApi.getAlerts();
-        const openAlerts = response.data.filter(a => a.missionStatus === 'OPEN');
-        setActiveAlerts(openAlerts);
-      } catch (error) {
-        console.error("Failed to load satellite data", error);
-      }
-    };
-    fetchLocations();
-  }, []);
+  const disasterTypes = [
+  "Flood", "Earthquake", "Fire", "Cyclone", "Landslide",
+  "Tsunami", "Drought", "Heatwave", "Cold Wave",
+  "Building Collapse", "Industrial Accident", "Gas Leak",
+  "Explosion", "Road Accident", "Stampede", "Pandemic", "Other"
+];
 
-  // --- NEW: AUTO-SELECT DISASTER TYPE & CAPTURE ID LOGIC ---
+const severityLevels = ["Low", "Moderate", "High", "Critical"];
+
+const urgencyLevels = ["Low", "Medium", "Immediate"];
+
+
+  // Accurate coordinates
+  const locationCoordinates = {
+    "Bhuj": { lat: 23.2530, lng: 69.6693 },
+    "Bhuj, Gujarat": { lat: 23.2530, lng: 69.6693 },
+    "Mumbai": { lat: 19.0760, lng: 72.8777 },
+    "Delhi": { lat: 28.7041, lng: 77.1025 },
+    "Chennai": { lat: 13.0827, lng: 80.2707 },
+    "Kolkata": { lat: 22.5726, lng: 88.3639 },
+    "Bangalore": { lat: 12.9716, lng: 77.5946 },
+    "Hyderabad": { lat: 17.3850, lng: 78.4867 },
+    "Ahmedabad": { lat: 23.0225, lng: 72.5714 }
+  };
+
+  const getCoordinatesForLocation = (location) => {
+    const normalized = location.toLowerCase();
+    if (locationCoordinates[location]) return locationCoordinates[location];
+
+    for (const key in locationCoordinates) {
+      if (normalized.includes(key.toLowerCase())) {
+        return locationCoordinates[key];
+      }
+    }
+    return { lat: 22.0, lng: 82.0 }; // India center fallback
+  };
+
+ useEffect(() => {
+  const fetchAlerts = async () => {
+    try {
+      const response = await idroApi.getAlerts();
+      console.log("API response:", response.data);
+
+      const open = response.data.filter(a => a.missionStatus === "OPEN");
+      console.log("Filtered OPEN alerts:", open);
+
+      setActiveAlerts(open);
+    } catch (err) {
+      console.error("Alert fetch failed", err);
+    }
+  };
+  fetchAlerts();
+}, []);
+
+
   const handleLocationChange = (e) => {
-    const selectedLoc = e.target.value;
-    
-    // Find the alert object that matches the selected location
-    const matchedAlert = activeAlerts.find(alert => alert.location === selectedLoc);
+    const loc = e.target.value;
+    const matched = activeAlerts.find(a => a.location === loc);
 
     setForm(prev => ({
       ...prev,
-      location: selectedLoc,
-      // If a match is found, auto-select the Type. Otherwise, reset Type.
-      type: matchedAlert ? matchedAlert.type : "" 
+      location: loc,
+      type: matched ? matched.type : ""
     }));
 
-    // NEW: Capture the ID so we update the existing record
-    if (matchedAlert) {
-        setSelectedAlertId(matchedAlert.id);
-    } else {
-        setSelectedAlertId(null);
-    }
+    setSelectedAlertId(matched ? matched.id : null);
   };
-  // --------------------------------------------
 
   const toggleArrayValue = (key, value) => {
     setForm(prev => ({
@@ -102,216 +116,342 @@ export default function VolunteerForm() {
   };
 
   const addCamp = () => {
-    setCamps([...camps, { name: "", location: "", capacity: "", people: "", needs: [] }]);
+    setCamps([...camps, { name: "", location: "", people: "", needs: [] }]);
   };
 
   const updateCamp = (index, field, value) => {
-    const updated = [...camps];
-    updated[index][field] = value;
-    setCamps(updated);
+    const copy = [...camps];
+    copy[index][field] = value;
+    setCamps(copy);
   };
 
   const toggleCampNeed = (index, need) => {
-    const updated = [...camps];
-    updated[index].needs = updated[index].needs.includes(need)
-      ? updated[index].needs.filter(n => n !== need)
-      : [...updated[index].needs, need];
-    setCamps(updated);
+    const copy = [...camps];
+    copy[index].needs = copy[index].needs.includes(need)
+      ? copy[index].needs.filter(n => n !== need)
+      : [...copy[index].needs, need];
+    setCamps(copy);
   };
 
   const submit = async (e) => {
     e.preventDefault();
 
+    if (!form.location || !form.type || !form.severity || !form.urgency) {
+  alert("Please fill Location, Type, Severity and Urgency");
+  return;
+}
+
+
+    const coords = getCoordinatesForLocation(form.location);
+
     const payload = {
-      ...form,
-      id: selectedAlertId, // <--- CRITICAL: Sends the ID so Backend performs UPDATE
-      details: `Infra: ${form.infra.join(', ')}. Needs: ${form.needs.join(', ')}. Verified by: ${form.verifiedBy}`,
-      impact: `Camps Active: ${camps.length}. Missing: ${form.missing}`,
-      reporterLevel: "VOLUNTEER",
-      sourceType: "VOLUNTEER-APP",
-      missionStatus: "OPEN",
-      time: new Date().toLocaleTimeString()
-    };
+  location: form.location,
+  type: form.type.toUpperCase(),
+
+  // New fields for UI compatibility
+  color: form.severity === "High" ? "RED" : "ORANGE",
+  magnitude: form.severity,
+  impact: `Needs: ${form.needs.join(", ")}`,
+  time: new Date().toLocaleString(),
+
+  affectedCount: Number(form.affectedCount) || 0,
+  injuredCount: Number(form.injuredCount) || 0,
+  missing: form.missing,
+
+  details: `Infra: ${form.infra.join(", ")} | Needs: ${form.needs.join(", ")}`,
+  reporterLevel: "VOLUNTEER",
+  sourceType: "VOLUNTEER-APP",
+  missionStatus: "OPEN",
+  latitude: coords.lat,
+  longitude: coords.lng,
+  trustScore: 80
+};
 
     try {
-      await idroApi.submitReport(payload);
-      alert("✅ Verified Intelligence Sent to Command Center!");
-      
-      // Reset Form
-      setForm({
-        location: "",
-        type: "",
-        severity: "",
-        urgency: "",
-        affectedCount: "",
-        injuredCount: "",
-        missing: "",
-        verifiedBy: "",
-        infra: [],
-        needs: []
-      });
+      let alertId = selectedAlertId;
+
+if (selectedAlertId) {
+  await idroApi.updateReport(selectedAlertId, payload);
+} else {
+  const res = await idroApi.submitReport(payload);
+  alertId = res.data.id; // ✅ CRITICAL
+}
+
+
+      for (const camp of camps) {
+        if (!camp.name) continue;
+
+        await idroApi.createCamp({
+  name: camp.name,
+  location: camp.location,
+  population: Number(camp.people) || 0,
+  latitude: coords.lat,
+  longitude: coords.lng,
+alertId: alertId,
+  stock: {
+    food: camp.needs.includes("Food") ? "Available" : "Low",
+    water: camp.needs.includes("Water") ? "Available" : "Low",
+    medicine: camp.needs.includes("Medicines") ? "Available" : "Low"
+  }
+});
+
+
+      }
+
+      alert("✅ Submitted successfully");
+      setForm({ location:"",type:"",severity:"",urgency:"",affectedCount:"",injuredCount:"",missing:"",verifiedBy:"",infra:[],needs:[] });
       setCamps([]);
-      setSelectedAlertId(null); // Reset ID
-    } catch (error) {
-      console.error("Submission Error:", error);
-      alert("❌ Submission Failed. Is the Backend Running?");
+      setSelectedAlertId(null);
+
+    } catch (err) {
+      console.error(err);
+      alert("❌ Submission failed");
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#0f172a] text-white p-8">
-      <form onSubmit={submit} className="max-w-6xl mx-auto bg-[#1e293b] p-10 rounded-2xl space-y-10 border border-white/10 shadow-2xl">
+    return (
+    <div className="min-h-screen bg-[#0f172a] flex justify-center items-start pt-10 text-white">
+      <form
+        onSubmit={submit}
+        className="w-[1000px] bg-[#1e293b] rounded-2xl border border-white/10 p-8 shadow-2xl space-y-8"
+      >
+        <h1 className="text-3xl font-bold text-center">
+          Volunteer Disaster Intelligence Panel
+        </h1>
 
-        <h1 className="text-3xl font-black text-center tracking-wider text-blue-400">VOLUNTEER INTELLIGENCE UPLINK</h1>
+        {/* Location Information */}
+<section className="space-y-4">
+  <h2 className="text-blue-400 font-semibold">📍 Location Information</h2>
 
-        {/* --- DISASTER INFO --- */}
-        <section className="space-y-5">
-          <h2 className="text-xl font-semibold border-b border-white/10 pb-2">📍 Location & Casualty Report</h2>
+  {/* Alert dropdown */}
+  <select
+  value={form.location}
+  onChange={(e) =>
+    setForm(prev => ({ ...prev, location: e.target.value }))
+  }
+  className="w-full bg-slate-900 border border-slate-600 p-3 rounded"
+>
+  <option value="">Select Alert Location</option>
 
-          {/* 1. AUTO-LOCATION DROPDOWN (Now triggers Auto-Type) */}
-          <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30">
-            <label className="block text-blue-400 font-bold mb-2 uppercase text-xs tracking-widest">
-              Select Active Satellite Alert
-            </label>
-            <select 
-              value={form.location} 
-              onChange={handleLocationChange} // Using the new handler here
-              className="w-full bg-[#0f172a] text-white p-4 rounded-xl border border-white/10 focus:border-blue-500 outline-none cursor-pointer"
-              required
-            >
-              <option value="">-- Select Detected Zone --</option>
-              {activeAlerts.map(alert => (
-                <option key={alert.id} value={alert.location}>
-                   [LIVE] {alert.type} - {alert.location}
-                </option>
-              ))}
-              <option value="New Location">-- Report New Location --</option>
-            </select>
-            <p className="text-[10px] text-slate-500 mt-2 italic">* Disaster Type will be auto-detected based on selection.</p>
-          </div>
+  <option value="Swargate, Pune">Swargate, Pune</option>
+  <option value="Shivajinagar, Pune">Shivajinagar, Pune</option>
+  <option value="Andheri East, Mumbai">Andheri East, Mumbai</option>
+  <option value="Salt Lake, Kolkata">Salt Lake, Kolkata</option>
+  <option value="Sector 62, Noida">Sector 62, Noida</option>
+</select>
 
+
+  {/* Extra fields */}
+  {/* <div className="grid grid-cols-3 gap-4">
+    <input
+      placeholder="Village / Area"
+      className="bg-slate-900 p-3 rounded border border-slate-600"
+    />
+    <input
+      placeholder="District"
+      className="bg-slate-900 p-3 rounded border border-slate-600"
+    />
+    <input
+      placeholder="State"
+      className="bg-slate-900 p-3 rounded border border-slate-600"
+    />
+  </div> */}
+</section>
+
+
+        {/* Location */}
+        <section className="space-y-3">
+  <h2 className="text-blue-400 font-semibold">🌀 Disaster Classification</h2>
+
+  <div className="grid grid-cols-3 gap-4">
+
+    {/* Disaster Type */}
+    <select
+      value={form.type}
+      onChange={(e) => setForm(prev => ({ ...prev, type: e.target.value }))}
+      className="bg-slate-900 p-3 rounded border border-slate-600"
+    >
+      <option value="">Select Disaster Type</option>
+      {disasterTypes.map(type => (
+        <option key={type} value={type}>{type}</option>
+      ))}
+    </select>
+
+    {/* Severity */}
+    <select
+      value={form.severity}
+      onChange={(e) => setForm(prev => ({ ...prev, severity: e.target.value }))}
+      className="bg-slate-900 p-3 rounded border border-slate-600"
+    >
+      <option value="">Severity Level</option>
+      {severityLevels.map(level => (
+        <option key={level} value={level}>{level}</option>
+      ))}
+    </select>
+
+    {/* Urgency */}
+    <select
+      value={form.urgency}
+      onChange={(e) => setForm(prev => ({ ...prev, urgency: e.target.value }))}
+      className="bg-slate-900 p-3 rounded border border-slate-600"
+    >
+      <option value="">Urgency</option>
+      {urgencyLevels.map(level => (
+        <option key={level} value={level}>{level}</option>
+      ))}
+    </select>
+
+  </div>
+</section>
+
+        {/* Disaster Classification */}
+        {/* <section className="space-y-3">
+          <h2 className="text-blue-400 font-semibold">🌀 Disaster Classification</h2>
           <div className="grid grid-cols-3 gap-4">
-            {/* 2. DISASTER TYPE (Now Auto-Filled) */}
-            <select 
-                value={form.type} 
-                onChange={e => setForm({ ...form, type: e.target.value })} 
-                className="bg-black/30 p-3 rounded-xl border border-white/5 font-bold text-blue-200"
-            >
-              <option value="">Disaster Type (Auto)</option>
-              <option>FLOOD</option>
-              <option>CYCLONE</option>
-              <option>EARTHQUAKE</option>
-              <option>LANDSLIDE</option>
-              <option>FIRE</option>
-            </select>
-
-            <select value={form.severity} onChange={e => setForm({ ...form, severity: e.target.value })} className="bg-black/30 p-3 rounded-xl border border-white/5">
-              <option value="">Severity</option>
-              <option>Level 1</option>
-              <option>Level 2</option>
-              <option>Level 3</option>
-              <option>Critical</option>
-            </select>
-
-            <select value={form.urgency} onChange={e => setForm({ ...form, urgency: e.target.value })} className="bg-black/30 p-3 rounded-xl border border-white/5">
-              <option value="">Urgency</option>
-              <option>Low</option>
-              <option>Medium</option>
-              <option>High</option>
-              <option>Immediate</option>
-            </select>
+            <input disabled value={form.type} placeholder="Disaster Type" className="bg-slate-900 p-3 rounded border border-slate-600" />
+            <input placeholder="Severity Level" className="bg-slate-900 p-3 rounded border border-slate-600" />
+            <input placeholder="Urgency" className="bg-slate-900 p-3 rounded border border-slate-600" />
           </div>
+        </section> */}
 
-          <div className="grid grid-cols-3 gap-4">
-            <input 
-              type="number"
-              value={form.affectedCount} 
-              onChange={e => setForm({ ...form, affectedCount: e.target.value })} 
-              placeholder="People Affected (Count)" 
-              className="bg-black/30 p-3 rounded-xl border border-white/5 focus:border-blue-500 outline-none" 
-            />
-            <input 
-              type="number"
-              value={form.injuredCount} 
-              onChange={e => setForm({ ...form, injuredCount: e.target.value })} 
-              placeholder="Injured (Count)" 
-              className="bg-black/30 p-3 rounded-xl border border-white/5 focus:border-blue-500 outline-none" 
-            />
-            <input 
-              value={form.missing} 
-              onChange={e => setForm({ ...form, missing: e.target.value })} 
-              placeholder="Missing (Est.)" 
-              className="bg-black/30 p-3 rounded-xl border border-white/5 focus:border-blue-500 outline-none" 
-            />
-          </div>
-        </section>
+        {/* Human Impact */}
+       <section className="space-y-3">
+  <h2 className="text-blue-400 font-semibold">👥 Human Impact</h2>
 
-        {/* --- INFRASTRUCTURE --- */}
-        <section>
-          <h2 className="text-lg font-semibold mb-3">🏚 Infrastructure Damage</h2>
+  <div className="grid grid-cols-3 gap-4">
+    <input
+  placeholder="People Affected"
+  value={form.affectedCount}
+  onChange={(e) => setForm(prev => ({ ...prev, affectedCount: e.target.value }))}
+  className="bg-slate-900 p-3 rounded border border-slate-600"
+/>
+
+<input
+  placeholder="Injured Count"
+  value={form.injuredCount}
+  onChange={(e) => setForm(prev => ({ ...prev, injuredCount: e.target.value }))}
+  className="bg-slate-900 p-3 rounded border border-slate-600"
+/>
+
+<input
+  placeholder="Missing People"
+  value={form.missing}
+  onChange={(e) => setForm(prev => ({ ...prev, missing: e.target.value }))}
+  className="bg-slate-900 p-3 rounded border border-slate-600"
+/>
+
+  </div>
+</section>
+
+
+        {/* Infrastructure */}
+        <section className="space-y-3">
+          <h2 className="text-blue-400 font-semibold">🏚 Infrastructure Damage</h2>
           <div className="grid grid-cols-3 gap-3">
-            {infraOptions.map(i => (
-              <label key={i} className={`p-3 rounded-xl cursor-pointer border transition-all ${form.infra.includes(i) ? 'bg-red-900/40 border-red-500' : 'bg-black/30 border-white/5 hover:bg-white/5'}`}>
-                <input type="checkbox" className="mr-2" checked={form.infra.includes(i)} onChange={() => toggleArrayValue("infra", i)} /> {i}
+            {infraOptions.map(opt => (
+              <label key={opt} className="flex gap-2 items-center bg-slate-900 p-3 rounded border border-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.infra.includes(opt)}
+                  onChange={() => toggleArrayValue("infra", opt)}
+                />
+                {opt}
               </label>
             ))}
           </div>
         </section>
 
-        {/* --- NEEDS --- */}
-        <section>
-          <h2 className="text-lg font-semibold mb-3">🚑 Immediate Needs</h2>
-          <div className="grid grid-cols-4 gap-3">
-            {needsOptions.map(n => (
-              <label key={n} className={`p-3 rounded-xl cursor-pointer border transition-all ${form.needs.includes(n) ? 'bg-orange-900/40 border-orange-500' : 'bg-black/30 border-white/5 hover:bg-white/5'}`}>
-                <input type="checkbox" className="mr-2" checked={form.needs.includes(n)} onChange={() => toggleArrayValue("needs", n)} /> {n}
+        {/* Needs */}
+        <section className="space-y-3">
+          <h2 className="text-blue-400 font-semibold">📦 Immediate Needs</h2>
+          <div className="grid grid-cols-3 gap-3">
+            {needsOptions.map(opt => (
+              <label key={opt} className="flex gap-2 items-center bg-slate-900 p-3 rounded border border-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.needs.includes(opt)}
+                  onChange={() => toggleArrayValue("needs", opt)}
+                />
+                {opt}
               </label>
             ))}
           </div>
         </section>
 
-        {/* --- VERIFIED BY --- */}
+        {/* Camps Section */}
+<section className="space-y-4">
+  <h2 className="text-blue-400 font-semibold">⛺ Relief Camps</h2>
+
+  {camps.length === 0 && (
+    <p className="text-sm text-slate-500">No camps added yet.</p>
+  )}
+
+  {camps.map((camp, index) => (
+    <div
+      key={index}
+      className="bg-[#0f172a] border border-white/10 p-4 rounded-xl space-y-3"
+    >
+      <div className="grid grid-cols-3 gap-4">
         <input
-          value={form.verifiedBy}
-          onChange={e => setForm({ ...form, verifiedBy: e.target.value })}
-          placeholder="Verified By (Volunteer Name / ID)"
-          className="w-full bg-black/30 p-4 rounded-xl border border-white/10 focus:border-blue-500 outline-none"
+          placeholder="Camp Name"
+          value={camp.name}
+          onChange={(e) => updateCamp(index, "name", e.target.value)}
+          className="bg-slate-900 p-2 rounded border border-slate-600"
         />
 
-        {/* --- CAMPS SECTION --- */}
-        <section className="space-y-6">
-          <div className="flex justify-between items-center border-t border-white/10 pt-6">
-            <h2 className="text-xl font-semibold">🏕 Camp Information</h2>
-            <button type="button" onClick={addCamp} className="bg-green-600 hover:bg-green-500 transition px-5 py-2 rounded-xl font-bold text-sm">
-                ➕ Add Camp
-            </button>
-          </div>
+        <input
+          placeholder="Location"
+          value={camp.location}
+          onChange={(e) => updateCamp(index, "location", e.target.value)}
+          className="bg-slate-900 p-2 rounded border border-slate-600"
+        />
 
-          {camps.map((camp, i) => (
-            <div key={i} className="bg-[#0f172a] p-6 rounded-xl border border-white/10 space-y-4 shadow-lg">
-              <h3 className="text-blue-400 font-bold uppercase text-xs tracking-wider">Camp #{i + 1} Details</h3>
+        <input
+          placeholder="People Capacity"
+          type="number"
+          value={camp.people}
+          onChange={(e) => updateCamp(index, "people", e.target.value)}
+          className="bg-slate-900 p-2 rounded border border-slate-600"
+        />
+      </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <input placeholder="Camp Name" onChange={e => updateCamp(i, "name", e.target.value)} className="bg-black/30 p-3 rounded-xl border border-white/5" />
-                <input placeholder="Camp Location" onChange={e => updateCamp(i, "location", e.target.value)} className="bg-black/30 p-3 rounded-xl border border-white/5" />
-                <input placeholder="Capacity" onChange={e => updateCamp(i, "capacity", e.target.value)} className="bg-black/30 p-3 rounded-xl border border-white/5" />
-                <input placeholder="Current People" onChange={e => updateCamp(i, "people", e.target.value)} className="bg-black/30 p-3 rounded-xl border border-white/5" />
-              </div>
+      <div className="grid grid-cols-4 gap-3 pt-2">
+        {campNeeds.map(need => (
+          <label
+            key={need}
+            className="flex items-center gap-2 bg-slate-900 p-2 rounded border border-slate-700 text-sm"
+          >
+            <input
+              type="checkbox"
+              checked={camp.needs.includes(need)}
+              onChange={() => toggleCampNeed(index, need)}
+            />
+            {need}
+          </label>
+        ))}
+      </div>
+    </div>
+  ))}
+</section>
 
-              <div className="grid grid-cols-3 gap-3">
-                {campNeeds.map(n => (
-                  <label key={n} className="bg-black/30 p-2 rounded-xl cursor-pointer hover:bg-white/5 transition flex items-center gap-2">
-                    <input type="checkbox" onChange={() => toggleCampNeed(i, n)} /> <span className="text-sm">{n}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
 
-        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold text-lg tracking-widest shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-all">
-          TRANSMIT INTEL TO COMMAND
-        </button>
+        {/* Buttons */}
+        <div className="flex justify-end gap-4 pt-4">
+          <button
+            type="button"
+            onClick={addCamp}
+            className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded"
+          >
+            + Add Camp
+          </button>
+
+          <button
+            type="submit"
+            className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded"
+          >
+            Submit Report
+          </button>
+        </div>
       </form>
     </div>
   );

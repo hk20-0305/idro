@@ -1,86 +1,85 @@
-// API Service for HTTP requests
+const BASE_URL = "http://localhost:8085/api";
+
 class ApiService {
-  async get(url) {
+
+  async request(endpoint, method = "GET", data = null) {
+    const options = {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+
     try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await fetch(`${BASE_URL}${endpoint}`, options);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const text = await response.text();
+        throw new Error(text || `HTTP Error ${response.status}`);
       }
 
       return await response.json();
     } catch (error) {
-      console.error('GET request failed:', error);
+      console.error("API Error:", error.message);
       throw error;
     }
   }
 
-  async post(url, data) {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('POST request failed:', error);
-      throw error;
-    }
+  // ---------- AUTH ----------
+  login(data) {
+    return this.request("/login", "POST", data);
   }
 
-  async put(url, data) {
-    try {
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('PUT request failed:', error);
-      throw error;
-    }
+  // ---------- ALERTS ----------
+  getAlerts() {
+    return this.request("/alerts");
   }
 
-  async delete(url) {
-    try {
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  getAlert(id) {
+    return this.request(`/alerts/${id}`);
+  }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  createAlert(data) {
+    return this.request("/alerts", "POST", data);
+  }
 
-      return await response.json();
-    } catch (error) {
-      console.error('DELETE request failed:', error);
-      throw error;
-    }
+  updateAlert(id, data) {
+    return this.request(`/alerts/${id}`, "PUT", data);
+  }
+
+  deleteAlert(id) {
+    return this.request(`/alerts/${id}`, "DELETE");
+  }
+
+  // ---------- ANALYTICS ----------
+  getImpact(id) {
+    return this.request(`/analytics/impact/${id}`);
+  }
+
+  getStats() {
+    return this.request("/analytics/stats");
+  }
+
+  // ---------- CAMPS ----------
+  getCamps() {
+    return this.request("/camps");
+  }
+
+  createCamp(data) {
+    return this.request("/camps", "POST", data);
+  }
+
+  // ---------- ACTIONS ----------
+  getActions() {
+    return this.request("/actions");
+  }
+
+  createAction(data) {
+    return this.request("/actions", "POST", data);
   }
 }
 

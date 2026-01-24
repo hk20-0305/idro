@@ -7,6 +7,8 @@ import VolunteerForm from "./pages/VolunteerForm";
 import ImpactList from "./pages/ImpactList";
 import DisasterAnalyzer from "./pages/DisasterAnalyzer";
 import MissionControl from "./pages/MissionControl";
+import DisasterDetails2 from './pages/DisasterDetails2';
+
 
 // Import the components
 import IdroHome from './components/IdroHome';
@@ -32,6 +34,7 @@ function App() {
   <Route path="/impact-analysis/:id" element={<DisasterAnalyzer />} />
 
   <Route path="/mission-control" element={<MissionControl />} />
+<Route path="/disasterdetails2/:id" element={<DisasterDetails2 />} />
 
 
 </Routes>

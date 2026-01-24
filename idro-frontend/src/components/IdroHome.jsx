@@ -265,7 +265,7 @@ export default function IdroHome() {
 
 
             {/* Card 3: Response Unit - NOW CLICKABLE */}
-            <div onClick={() => setShowResponseModal(true)} className="cursor-pointer bg-[#2a250f] rounded-lg p-4 border border-yellow-500/30 hover:border-yellow-500 hover:bg-[#3a3318] transition-all group flex items-center gap-4">
+            <div onClick={() => navigate("/mission-control")} className="cursor-pointer bg-[#2a250f] rounded-lg p-4 border border-yellow-500/30 hover:border-yellow-500 hover:bg-[#3a3318] transition-all group flex items-center gap-4">
   <div className="p-3 bg-yellow-500 text-black rounded-md shadow-[0_0_15px_#eab308]">
     <Siren />
   </div>
@@ -405,7 +405,7 @@ export default function IdroHome() {
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                     <p className="text-xs text-slate-400 mb-4 uppercase tracking-widest font-bold">Select Mission for Deployment:</p>
                     
-                    {alerts.filter(alert => alert.trustScore > 75).map(alert => (
+                    {/* {alerts.filter(alert => alert.trustScore > 75).map(alert => (
   <div key={alert.id} className="bg-[#0f172a] p-4 rounded-xl border border-white/5 hover:border-orange-500/50 transition-all flex justify-between items-center group">
     <div>
       <div className="flex items-center gap-3 mb-1">
@@ -428,7 +428,7 @@ export default function IdroHome() {
       </button>
     </div>
   </div>
-))}
+))} */}
 
                 </div>
             </div>

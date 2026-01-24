@@ -20,6 +20,15 @@ public class Camp {
     @Id
     private String id;
 
+    private String alertId;
+    private String location;
+
+
+    public String getAlertId() { return alertId; }
+public void setAlertId(String alertId) { this.alertId = alertId; }
+
+
+
     private String name;              // e.g., "Kerala Relief Hub A"
     private CampStatus status;        // CRITICAL, STABLE, MODERATE
     private Integer urgencyScore;     // 0-100

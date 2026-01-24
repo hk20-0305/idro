@@ -1,10 +1,12 @@
 package com.india.idro.model;
 
-import com.india.idro.model.enums.AlertColor;
-import com.india.idro.model.enums.AlertType;
+import java.time.LocalDateTime;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import java.time.LocalDateTime;
+
+import com.india.idro.model.enums.AlertColor;
+import com.india.idro.model.enums.AlertType;
 
 @Document(collection = "alerts")
 public class Alert {
@@ -27,6 +29,7 @@ public class Alert {
     private String sourceType;
     private int affectedCount;
     private int injuredCount;
+    private String missing;
     private LocalDateTime createdAt;
     
     // ✅ ADDED MISSING FIELD
@@ -80,6 +83,9 @@ public class Alert {
 
     public int getInjuredCount() { return injuredCount; }
     public void setInjuredCount(int injuredCount) { this.injuredCount = injuredCount; }
+
+    public String getMissing() { return missing; }
+    public void setMissing(String missing) { this.missing = missing; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

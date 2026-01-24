@@ -1,11 +1,21 @@
 package com.india.idro.controller;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.india.idro.model.Alert;
 import com.india.idro.repository.AlertRepository; // ✅ Import this
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/alerts")
@@ -22,6 +32,13 @@ public class AlertController {
         return alertRepository.findAll();
     }
 
+    @GetMapping("/{id}")
+public Alert getAlertById(@PathVariable String id) {
+    return alertRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Alert not found"));
+}
+
+
     // 2. Create New Alert (Volunteer/Satellite)
     @PostMapping
     public Alert createAlert(@RequestBody Alert alert) {
@@ -32,11 +49,42 @@ public class AlertController {
         return alertRepository.save(alert);
     }
 
-    // 3. Delete Alert
-    @DeleteMapping("/{id}")
-    public void deleteAlert(@PathVariable String id) {
-        alertRepository.deleteById(id);
+    // 3. Update Existing Alert
+    @PutMapping("/{id}")
+    public Alert updateAlert(@PathVariable String id, @RequestBody Alert alert) {
+        return alertRepository.findById(id).map(existingAlert -> {
+            // Update fields
+            existingAlert.setType(alert.getType());
+            existingAlert.setColor(alert.getColor());
+            existingAlert.setLocation(alert.getLocation());
+            existingAlert.setLatitude(alert.getLatitude());
+            existingAlert.setLongitude(alert.getLongitude());
+            existingAlert.setMagnitude(alert.getMagnitude());
+            existingAlert.setImpact(alert.getImpact());
+            existingAlert.setDetails(alert.getDetails());
+            existingAlert.setTime(alert.getTime());
+            existingAlert.setMissionStatus(alert.getMissionStatus());
+            existingAlert.setTrustScore(alert.getTrustScore());
+            existingAlert.setReporterLevel(alert.getReporterLevel());
+            existingAlert.setSourceType(alert.getSourceType());
+            existingAlert.setAffectedCount(alert.getAffectedCount());
+            existingAlert.setInjuredCount(alert.getInjuredCount());
+            existingAlert.setResponderName(alert.getResponderName());
+            return alertRepository.save(existingAlert);
+        }).orElseThrow(() -> new RuntimeException("Alert not found"));
     }
+
+    // 3. Delete Alert
+   @DeleteMapping("/{id}")
+public Alert closeAlert(@PathVariable String id) {
+    return alertRepository.findById(id)
+        .map(alert -> {
+            alert.setMissionStatus("CLOSED");
+            return alertRepository.save(alert);
+        })
+        .orElseThrow(() -> new RuntimeException("Alert not found"));
+}
+
 
     // ✅ 4. NEW: Assign Mission (Locks the task for an NGO)
     @PutMapping("/{id}/assign")

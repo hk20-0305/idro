@@ -10,6 +10,11 @@ import java.util.List;
 @Repository
 public interface CampRepository extends MongoRepository<Camp, String> {
 
+    
+
+    List<Camp> findByAlertId(String alertId);
+
+
     // Find camps by status (CRITICAL, STABLE, MODERATE)
     List<Camp> findByStatus(CampStatus status);
 

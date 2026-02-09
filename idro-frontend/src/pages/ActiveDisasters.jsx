@@ -1,43 +1,53 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Activity, MapPin, TriangleAlert } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { idroApi } from "../services/api";
-import { TriangleAlert, ArrowRight, Activity, MapPin, Trash2 } from "lucide-react";
 
 export default function ActiveDisasters() {
   const [disasters, setDisasters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
- useEffect(() => {
-  fetchDisasters(); // first load
 
-  const interval = setInterval(() => {
-    fetchDisasters(); // refresh every 3 seconds
-  }, 3000);
+  const removeDuplicates = (data) => {
+    const uniqueMap = new Map();
+    data.forEach(item => uniqueMap.set(item.location, item));
+    return Array.from(uniqueMap.values());
+  };
 
-  return () => clearInterval(interval); // cleanup
-}, []);
-
-  const fetchDisasters = async () => {
+  const fetchDisasters = useCallback(async () => {
     try {
       const res = await idroApi.getAlerts();
+      console.log("🔍 Raw API Response:", res.data);
 
       // Normalize MongoDB _id → id
       const normalized = res.data.map(item => ({
         ...item,
         id: item.id || item._id
       }));
+      console.log("🔍 Normalized data:", normalized);
 
       const active = normalized.filter(alert => alert.missionStatus === "OPEN");
+      console.log("🔍 Filtered OPEN alerts:", active);
+
       const uniqueDisasters = removeDuplicates(active);
+      console.log("🔍 Unique disasters:", uniqueDisasters);
 
       setDisasters(uniqueDisasters);
     } catch (err) {
-      console.error("Failed to fetch active disasters", err);
+      console.error("❌ Failed to fetch active disasters", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchDisasters(); // first load
+
+    const interval = setInterval(() => {
+      fetchDisasters(); // refresh every 3 seconds
+    }, 3000);
+
+    return () => clearInterval(interval); // cleanup
+  }, [fetchDisasters]);
 
   // DELETE FUNCTION
   const handleDelete = async (e, id) => {
@@ -56,16 +66,18 @@ export default function ActiveDisasters() {
     }
   };
 
-  const removeDuplicates = (data) => {
-    const uniqueMap = new Map();
-    data.forEach(item => uniqueMap.set(item.location, item));
-    return Array.from(uniqueMap.values());
-  };
 
-  const getCardStyle = (color) => {
-    if (color === "RED") return "bg-red-950/40 border-red-500/50 hover:border-red-500 hover:bg-red-900/40";
-    if (color === "ORANGE") return "bg-orange-950/40 border-orange-500/50 hover:border-orange-500 hover:bg-orange-900/40";
-    return "bg-slate-800 border-white/10 hover:border-blue-500";
+  const getCardStyle = (urgency, color) => {
+    // High / Immediate
+    if (urgency === "Immediate" || urgency === "High" || color === "RED")
+      return "bg-red-950/40 border-red-500/50 hover:border-red-500 hover:bg-red-900/40";
+
+    // Medium
+    if (urgency === "Medium" || color === "ORANGE")
+      return "bg-yellow-950/40 border-yellow-500/50 hover:border-yellow-500 hover:bg-yellow-900/40";
+
+    // Low / Default
+    return "bg-green-950/40 border-green-500/50 hover:border-green-500 hover:bg-green-900/40";
   };
 
   return (
@@ -92,62 +104,43 @@ export default function ActiveDisasters() {
         <div className="text-slate-500 italic">No Active Disasters Detected. System Normal.</div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {disasters.map(d => (
-          <div
-            key={d.id}
-            onClick={() => navigate(`/disaster/${d.id}`)}
-            className={`cursor-pointer p-6 rounded-2xl border transition-all duration-300 group relative overflow-hidden ${getCardStyle(d.color)}`}
-          >
-            <div className="absolute -right-4 -top-4 opacity-5 text-white transform rotate-12 group-hover:scale-110 transition-transform">
-              <TriangleAlert size={150} />
-            </div>
+      {console.log("🎨 Rendering with disasters:", disasters, "Length:", disasters.length)}
 
-            <div className="relative z-10">
-              <div className="flex justify-between items-start mb-4">
-                <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${
-                  d.color === "RED" ? "bg-red-600 text-white border-red-400" : "bg-orange-500 text-white border-orange-400"
-                }`}>
-                  {d.color === "RED" ? "CRITICAL ALERT" : "WARNING"}
-                </span>
-
-                <button
-                  onClick={(e) => handleDelete(e, d.id)}
-                  className="p-2 bg-black/40 hover:bg-red-600 rounded-lg text-slate-400 hover:text-white transition-all z-50 border border-white/10"
-                >
-                  <Trash2 size={16} />
-                </button>
+      {disasters.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {disasters.map(d => (
+            <div
+              key={d.id}
+              className={`p-6 rounded-2xl border transition-all duration-300 group relative overflow-hidden ${getCardStyle(d.urgency, d.color)}`}
+            >
+              <div className="absolute -right-4 -top-4 opacity-5 text-white transform rotate-12 group-hover:scale-110 transition-transform">
+                <TriangleAlert size={150} />
               </div>
 
-              <h2 className="text-2xl font-bold mb-1 group-hover:text-blue-300 transition-colors">
-                {d.type || "UNKNOWN"}
-              </h2>
-
-              <div className="flex items-center gap-2 text-slate-300 mb-4 text-sm font-medium">
-                <MapPin size={16} className="text-blue-500" /> {d.location || "Unknown Location"}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4 bg-black/20 p-4 rounded-lg border border-white/5">
-                <div>
-                  <p className="text-[10px] uppercase text-slate-500 tracking-wider font-bold">Severity</p>
-                  <p className="text-sm font-bold">{d.magnitude || "Assessing..."}</p>
+              <div className="relative z-10">
+                <div className="mb-4">
+                  <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${(d.urgency === "Immediate" || d.urgency === "High" || d.color === "RED")
+                      ? "bg-red-600 text-white border-red-400"
+                      : (d.urgency === "Medium" || d.color === "ORANGE")
+                        ? "bg-yellow-500 text-black border-yellow-400"
+                        : "bg-green-600 text-white border-green-400"
+                    }`}>
+                    {d.urgency ? d.urgency.toUpperCase() : (d.color === "RED" ? "CRITICAL ALERT" : "WARNING")}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase text-slate-500 tracking-wider font-bold">Impact</p>
-                  <p className="text-sm font-bold truncate">{d.impact || "Calculating..."}</p>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-slate-500 font-mono">Source: {d.reporterLevel || "SATELLITE"}</span>
-                <div className="flex items-center gap-2 text-xs font-bold text-blue-400 group-hover:text-white transition-colors uppercase tracking-widest">
-                  View Tactical Report <ArrowRight size={14} />
+                <h2 className="text-2xl font-bold mb-3 group-hover:text-blue-300 transition-colors">
+                  {d.type || "UNKNOWN"}
+                </h2>
+
+                <div className="flex items-center gap-2 text-slate-300 text-lg font-medium">
+                  <MapPin size={20} className="text-blue-500" /> {d.location || "Unknown Location"}
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

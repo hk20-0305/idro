@@ -67,12 +67,6 @@
             <optional>true</optional>
         </dependency>
 
-        <dependency>
-            <groupId>com.google.genai</groupId>
-            <artifactId>google-genai</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-
         <!-- Swagger/OpenAPI for API Documentation -->
         <dependency>
             <groupId>org.springdoc</groupId>

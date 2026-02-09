@@ -2,7 +2,11 @@ package com.india.idro.dto;
 
 import com.india.idro.model.Stock;
 import com.india.idro.model.enums.CampStatus;
-import jakarta.validation.constraints.*;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,6 +26,8 @@ public class CreateCampRequest {
     @Min(value = 0, message = "Urgency score must be between 0 and 100")
     @Max(value = 100, message = "Urgency score must be between 0 and 100")
     private Integer urgencyScore;
+
+    private String urgency;
 
     @NotNull(message = "Population is required")
     @Min(value = 0, message = "Population must be positive")

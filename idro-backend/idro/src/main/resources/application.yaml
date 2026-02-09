@@ -16,10 +16,7 @@ spring:
       database: idro_db
       auto-index-creation: true
 
-# NASA API
-nasa:
-  api:
-    key: eyJ0eXAiOiJKV1QiLCJvcmlnaW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3BzIiwiYWxnIjoiUlMyNTYifQ...
+
 
 # API Documentation (Swagger)
 springdoc:
@@ -36,7 +33,3 @@ logging:
     com.india.idro: DEBUG
     org.springframework.data.mongodb: DEBUG
 
-
-gemini:
-  api:
-    key: AIzaSyANZs4InPva-dOW9qHRwDinsyUm2RAK3n0

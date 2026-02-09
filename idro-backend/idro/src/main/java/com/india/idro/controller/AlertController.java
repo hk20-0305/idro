@@ -33,11 +33,10 @@ public class AlertController {
     }
 
     @GetMapping("/{id}")
-public Alert getAlertById(@PathVariable String id) {
-    return alertRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Alert not found"));
-}
-
+    public Alert getAlertById(@PathVariable String id) {
+        return alertRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Alert not found"));
+    }
 
     // 2. Create New Alert (Volunteer/Satellite)
     @PostMapping
@@ -70,21 +69,21 @@ public Alert getAlertById(@PathVariable String id) {
             existingAlert.setAffectedCount(alert.getAffectedCount());
             existingAlert.setInjuredCount(alert.getInjuredCount());
             existingAlert.setResponderName(alert.getResponderName());
+            existingAlert.setUrgency(alert.getUrgency());
             return alertRepository.save(existingAlert);
         }).orElseThrow(() -> new RuntimeException("Alert not found"));
     }
 
     // 3. Delete Alert
-   @DeleteMapping("/{id}")
-public Alert closeAlert(@PathVariable String id) {
-    return alertRepository.findById(id)
-        .map(alert -> {
-            alert.setMissionStatus("CLOSED");
-            return alertRepository.save(alert);
-        })
-        .orElseThrow(() -> new RuntimeException("Alert not found"));
-}
-
+    @DeleteMapping("/{id}")
+    public Alert closeAlert(@PathVariable String id) {
+        return alertRepository.findById(id)
+                .map(alert -> {
+                    alert.setMissionStatus("CLOSED");
+                    return alertRepository.save(alert);
+                })
+                .orElseThrow(() -> new RuntimeException("Alert not found"));
+    }
 
     // ✅ 4. NEW: Assign Mission (Locks the task for an NGO)
     @PutMapping("/{id}/assign")
@@ -94,7 +93,7 @@ public Alert closeAlert(@PathVariable String id) {
             if (!"OPEN".equals(alert.getMissionStatus()) && alert.getMissionStatus() != null) {
                 throw new RuntimeException("Mission already taken by " + alert.getResponderName());
             }
-            
+
             alert.setMissionStatus("ASSIGNED");
             alert.setResponderName(responderName);
             return alertRepository.save(alert);

@@ -1,33 +1,40 @@
 package com.india.idro.service;
 
-import com.india.idro.model.Alert;
-import com.india.idro.repository.AlertRepository;
-// import com.india.idro.repository.CampRepository; // Uncomment when you have CampRepo
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.india.idro.model.Alert;
+import com.india.idro.model.enums.UserRole;
+import com.india.idro.repository.AlertRepository;
+import com.india.idro.repository.CampRepository;
+import com.india.idro.repository.UserRepository;
+
 @Service
 public class AnalyticsService {
+    
 
     @Autowired
     private AlertRepository alertRepository;
 
-    // @Autowired
-    // private CampRepository campRepository;
+    @Autowired
+    private CampRepository campRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // --- 1. Impact Analysis (UPDATED WITH AI LOGIC) ---
     public Map<String, Object> calculateImpact(Alert alert) {
         int people = alert.getAffectedCount();
         int injured = alert.getInjuredCount();
-        
+
         // Safety check to handle type conversion
         String type = (alert.getType() != null) ? alert.getType().toString() : "";
 
         Map<String, Object> impact = new HashMap<>();
-        
+
         // Existing Calculations
         impact.put("foodPerDay", people * 2);
         impact.put("waterPerDay", people * 3);
@@ -36,7 +43,7 @@ public class AnalyticsService {
         impact.put("volunteers", (int) Math.ceil((double) people / 30));
 
         // --- NEW SMART LOGIC ADDED HERE ---
-        
+
         // 1. Shelter Shortfall: Assume 40% of affected people have lost homes
         impact.put("shelterShortfall", (int) (people * 0.4));
 
@@ -56,11 +63,12 @@ public class AnalyticsService {
         Map<String, Object> stats = new HashMap<>();
 
         long totalThreats = alertRepository.count();
-        // long activeCamps = campRepository.count(); // Uncomment later
+        long activeCamps = campRepository.count();
+        long volunteers = userRepository.countByRole(UserRole.VOLUNTEER);
 
         stats.put("totalThreats", totalThreats);
-        stats.put("activeCamps", 85); // Hardcoded for now until CampRepo is ready
-        stats.put("volunteers", 12450);
+        stats.put("activeCamps", activeCamps);
+        stats.put("volunteers", volunteers);
         stats.put("systemStatus", "ONLINE");
 
         return stats;

@@ -1,6 +1,7 @@
-import { ArrowLeft, XCircle } from "lucide-react";
+import * as Icons from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ReliefCalculationStandards from "../components/ReliefCalculationStandards";
 import { idroApi } from "../services/api";
 
 export default function DisasterAnalyzer() {
@@ -73,7 +74,7 @@ export default function DisasterAnalyzer() {
 
   if (error || !disaster) return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center gap-4">
-      <XCircle size={48} className="text-red-500" />
+      <Icons.XCircle size={48} className="text-red-500" />
       <p className="text-slate-400">{error || "Data Not Found"}</p>
       <button onClick={() => navigate(-1)} className="px-6 py-2 bg-slate-800 rounded hover:bg-slate-700 transition text-sm">Return to Dashboard</button>
     </div>
@@ -81,80 +82,129 @@ export default function DisasterAnalyzer() {
 
   const getUrgencyTheme = (urgency) => {
     switch (urgency?.toUpperCase()) {
-      case "IMMEDIATE": return { bg: "bg-red-950/20", border: "border-red-500/30", strip: "bg-red-600", text: "text-red-500", glow: "shadow-[0_0_30px_rgba(239,68,68,0.15)]" };
-      case "6 HOURS": return { bg: "bg-orange-950/20", border: "border-orange-500/30", strip: "bg-orange-600", text: "text-orange-500", glow: "shadow-[0_0_30px_rgba(249,115,22,0.15)]" };
-      case "12 HOURS": return { bg: "bg-yellow-950/20", border: "border-yellow-500/30", strip: "bg-yellow-600", text: "text-yellow-500", glow: "shadow-[0_0_30px_rgba(234,179,8,0.15)]" };
-      case "24 HOURS": return { bg: "bg-green-950/20", border: "border-green-500/30", strip: "bg-green-600", text: "text-green-500", glow: "shadow-[0_0_30px_rgba(34,197,94,0.15)]" };
-      default: return { bg: "bg-slate-900", border: "border-slate-800", strip: "bg-slate-500", text: "text-slate-500", glow: "" };
+      case "IMMEDIATE": return { bg: "bg-red-950/20", border: "border-red-500/30", strip: "bg-red-600", text: "text-red-500", glow: "shadow-[0_0_30px_rgba(239,68,68,0.15)]", label: "Critical Response" };
+      case "6 HOURS": return { bg: "bg-orange-950/20", border: "border-orange-500/30", strip: "bg-orange-600", text: "text-orange-500", glow: "shadow-[0_0_30px_rgba(249,115,22,0.15)]", label: "High Attention" };
+      case "12 HOURS": return { bg: "bg-yellow-950/20", border: "border-yellow-500/30", strip: "bg-yellow-600", text: "text-yellow-500", glow: "shadow-[0_0_30px_rgba(234,179,8,0.15)]", label: "Watch Closely" };
+      case "24 HOURS": return { bg: "bg-green-950/20", border: "border-green-500/30", strip: "bg-green-600", text: "text-green-500", glow: "shadow-[0_0_30px_rgba(34,197,94,0.15)]", label: "Stable" };
+      default: return { bg: "bg-slate-900", border: "border-slate-800", strip: "bg-slate-500", text: "text-slate-500", glow: "", label: "Stable" };
     }
   };
 
-  const getRiskColor = (level) => {
-    switch (level?.toUpperCase()) {
-      case "CRITICAL": return "text-red-500";
-      case "HIGH": return "text-orange-500";
-      case "MEDIUM": return "text-yellow-500";
-      case "LOW": return "text-green-500";
-      default: return "text-slate-500";
-    }
+  const priorityMapping = {
+    "IMMEDIATE": 1,
+    "6 HOURS": 2,
+    "12 HOURS": 3,
+    "24 HOURS": 4
   };
 
-  // Totals Section sums backend values directly
-  const totals = {
-    food: camps.reduce((sum, c) => sum + (c.foodPackets || 0), 0),
-    water: camps.reduce((sum, c) => sum + (c.waterLiters || 0), 0),
-    beds: camps.reduce((sum, c) => sum + (c.beds || 0), 0),
-    medicalKits: camps.reduce((sum, c) => sum + (c.medicalKits || 0), 0),
-    ambulances: camps.reduce((sum, c) => sum + (c.ambulances || 0), 0),
+  // Aggregated Intelligence Metrics
+  // Mission Status Logic
+  const getMissionStatus = () => {
+    if (camps.some(c => c.urgency?.toUpperCase() === "IMMEDIATE")) return { label: "Immediate Action Needed", color: "text-red-500" };
+    if (camps.some(c => c.urgency?.toUpperCase() === "6 HOURS")) return { label: "Action Required Soon", color: "text-orange-500" };
+    if (camps.some(c => c.urgency?.toUpperCase() === "12 HOURS")) return { label: "Monitor Closely", color: "text-yellow-500" };
+    return { label: "Under Control", color: "text-green-500" };
   };
+  const missionStatus = getMissionStatus();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-8 font-sans">
+      <style>{`
+        @keyframes alert-pulse-red {
+          0% { border-color: rgba(239, 68, 68, 0.2); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.1); }
+          50% { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 15px 3px rgba(239, 68, 68, 0.2); }
+          100% { border-color: rgba(239, 68, 68, 0.2); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.1); }
+        }
+        .animate-siren-red {
+          animation: alert-pulse-red 1.5s infinite;
+        }
+      `}</style>
       {/* Premium Command Header */}
-      <div className="relative mb-10 overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-blue-900/20 border border-slate-800 p-8 shadow-2xl">
-        {/* Subtle Background Glow */}
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-500/10 blur-[100px]" />
-
-        <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="space-y-1">
+      <div className="relative mb-10 overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 p-8 shadow-xl">
+        <div className="relative flex flex-col lg:flex-row justify-between items-start gap-6">
+          <div className="max-w-4xl space-y-3">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-all text-xs font-bold tracking-widest mb-4 group"
+              className="flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-all text-xs font-bold tracking-widest mb-2 group"
             >
-              <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> BACK TO MISSIONS
+              <Icons.ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> BACK TO MISSIONS
             </button>
-            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight uppercase">
-              {disaster.type} <span className="text-blue-500">/</span> {disaster.location}
-            </h1>
-            <div className="flex flex-wrap gap-4 items-center">
-              <span className="text-slate-500 text-xs font-mono bg-slate-800/50 px-2 py-1 rounded">MISSION ID: {disaster.id}</span>
-              <span className="h-1 w-1 rounded-full bg-slate-700" />
-              <span className="text-blue-400 text-xs font-bold tracking-widest uppercase">SEVERITY: {disaster.magnitude}</span>
+
+            <div className="space-y-1">
+              <h1 className="text-4xl font-bold text-white uppercase tracking-tight leading-none">
+                {disaster.type}
+              </h1>
+              <p className="text-lg font-medium text-slate-400 capitalize">
+                {disaster.location.toLowerCase()}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <span className="text-slate-500 text-[10px] font-mono bg-slate-800/50 px-2 py-1 rounded border border-white/5 uppercase">
+                ID: {disaster.id.slice(0, 8)}
+              </span>
             </div>
           </div>
 
-          <div className="hidden lg:block">
-            <div className="text-right">
-              <p className="text-[10px] text-slate-500 font-black tracking-widest uppercase mb-1">Status</p>
-              <p className="text-green-500 font-bold flex items-center gap-2 justify-end">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                LIVE COMMAND FEED
-              </p>
+          <div className="flex flex-wrap lg:flex-col items-start lg:items-end gap-3 mt-4 lg:mt-0">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">LIVE</span>
+            </div>
+
+            <div className="px-3 py-1.5 rounded-full bg-slate-800/50 border border-white/5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">COMMAND FEED</span>
+            </div>
+
+            <div className={`px-3 py-1.5 rounded-full border ${disaster.magnitude?.toLowerCase() === 'high' || disaster.magnitude?.toLowerCase() === 'critical'
+              ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+              : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+              }`}>
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                SEVERITY: {disaster.magnitude || 'NORMAL'}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Resource Summary Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-        <SummaryTile label="TOTAL FOOD PACKETS" value={totals.food} />
-        <SummaryTile label="TOTAL WATER LITERS" value={totals.water} />
-        <SummaryTile label="TOTAL BEDS" value={totals.beds} />
-        <SummaryTile label="TOTAL MEDICAL KITS" value={totals.medicalKits} />
-        <SummaryTile label="TOTAL AMBULANCES" value={totals.ambulances} />
+      {/* Operational Intelligence summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <SummaryTile
+          label="OVERALL MISSION STATUS"
+          value={missionStatus.label}
+          colorClass={missionStatus.color}
+          subtitle="Real-time operational health"
+          icon={<Icons.Activity size={18} className={missionStatus.color} />}
+          tooltip="Determined by the most critical survival window across all camps."
+        />
+        <SummaryTile
+          label="TOTAL AFFECTED PEOPLE"
+          value={camps.reduce((sum, c) => sum + (c.people || 0), 0)}
+          colorClass="text-yellow-400"
+          subtitle="People requiring support"
+          icon={<Icons.Users size={18} className="text-blue-400" />}
+          tooltip="Total population across all camps needing immediate assistance"
+        />
+        <SummaryTile
+          label="TOTAL INJURED PEOPLE"
+          value={camps.reduce((sum, c) => sum + (c.injured || 0), 0)}
+          colorClass="text-yellow-400"
+          subtitle="Patients requiring medical attention"
+          icon={<Icons.Activity size={18} className="text-red-400" />}
+          tooltip="Cumulative count of injured individuals across all mission zones"
+        />
+        <SummaryTile
+          label="ACTIVE CAMPS"
+          value={camps.length}
+          colorClass="text-yellow-400"
+          subtitle="Operational camps providing shelter"
+          icon={<Icons.Tent size={18} className="text-emerald-400" />}
+          tooltip="Number of functional relief facilities currently reporting data"
+        />
       </div>
 
       {/* Camps Operational Data */}
@@ -174,42 +224,26 @@ export default function DisasterAnalyzer() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-2xl font-black text-white leading-tight mb-2 tracking-tight">{camp.name.toUpperCase()}</h3>
-                      <div className="flex gap-6 text-slate-300 text-sm font-bold tracking-wide uppercase">
-                        <span className="flex items-center gap-2"><span className="text-slate-500">PEOPLE:</span> {camp.people}</span>
-                        <span className="flex items-center gap-2"><span className="text-slate-500">INJURED:</span> {camp.injured}</span>
+                      <div className="flex gap-6 text-slate-200 text-[11px] font-black tracking-widest uppercase">
+                        <span className="flex items-center gap-2"><span className="text-slate-400">PEOPLE:</span> <span className="text-sky-400 text-sm">{camp.people}</span></span>
+                        <span className="flex items-center gap-2"><span className="text-slate-400">INJURED:</span> <span className="text-rose-400 text-sm">{camp.injured}</span></span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Section 2: Urgency & Risk */}
-                  <div className="flex items-center gap-8 border-y border-white/10 py-4">
+                  {/* Section 2: Window & Status */}
+                  <div className="flex items-center gap-8 border-y border-white/10 py-5">
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase mb-1.5 tracking-tight">OPERATIONAL WINDOW</span>
-                      <span className={`px-2.5 py-1 rounded text-[11px] font-black text-white ${theme.strip}`}>
+                      <span className="text-xs text-slate-400 font-black uppercase mb-2 tracking-widest">Operational Survival Window</span>
+                      <span className={`px-3 py-1.5 rounded text-xs font-black text-white ${theme.strip} shadow-lg shadow-black/20`}>
                         {camp.urgency?.toUpperCase() || "N/A"}
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase mb-1.5 tracking-tight">CALCULATED RISK</span>
-                      <span className={`text-base font-black ${getRiskColor(camp.riskLevel)}`}>
-                        {camp.riskLevel || "LOW"}
+                      <span className="text-xs text-slate-400 font-black uppercase mb-2 tracking-widest">OPERATIONAL STATUS</span>
+                      <span className={`text-[13px] font-black px-2.5 py-1 rounded bg-white/5 border border-white/5 ${theme.text}`}>
+                        {theme.label.toUpperCase()}
                       </span>
-                    </div>
-                  </div>
-
-                  {/* Supply Saturation Gauge (Consumption Progress) */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-end">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">SUPPLY SATURATION</span>
-                      <span className="text-xs font-black text-green-500">
-                        {Math.max(0, Math.min(100, Math.round(camp.saturation || 0)))}%
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-red-600 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-500 transition-all duration-1000"
-                        style={{ width: `${Math.max(0, Math.min(100, camp.saturation || 0))}%` }}
-                      />
                     </div>
                   </div>
 
@@ -225,13 +259,13 @@ export default function DisasterAnalyzer() {
 
                   {/* Section 4: Operational Alerts */}
                   <div className="pt-2">
-                    <span className="text-[11px] text-slate-500 font-bold uppercase block mb-3 tracking-widest">COMMAND ALERTS</span>
-                    <div className="space-y-2.5">
+                    <span className="text-xs text-slate-400 font-black uppercase block mb-3 tracking-widest">COMMAND ALERTS</span>
+                    <div className="space-y-3">
                       {camp.explanations.length > 0 ? (
                         camp.explanations.map((ex, i) => (
-                          <div key={i} className="flex gap-3 items-start text-xs text-slate-200">
-                            <span className={`${theme.text} mt-0.5 text-lg leading-none`}>•</span>
-                            <span className="leading-relaxed font-medium">{ex}</span>
+                          <div key={i} className="flex gap-4 items-start text-sm text-slate-100">
+                            <span className={`${theme.text} mt-0 text-xl leading-none`}>•</span>
+                            <span className="leading-relaxed font-bold">{ex}</span>
                           </div>
                         ))
                       ) : (
@@ -245,24 +279,45 @@ export default function DisasterAnalyzer() {
           })}
         </div>
       </div>
+
+      <ReliefCalculationStandards />
     </div>
   );
 }
 
-function SummaryTile({ label, value }) {
+function SummaryTile({ label, value, subtitle, icon, colorClass = "text-white", status, tooltip }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-      <p className="text-[10px] text-slate-500 font-black tracking-widest mb-1.5 uppercase leading-none">{label}</p>
-      <p className="text-3xl font-black text-white leading-none tracking-tighter">{value?.toLocaleString() || 0}</p>
+    <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl relative group hover:border-blue-500/20 transition-all shadow-2xl flex flex-col justify-between h-full group" title={tooltip}>
+      <div className="flex justify-between items-start mb-4">
+        <p className="text-[11px] text-slate-400 font-black tracking-[0.15em] uppercase leading-none">{label}</p>
+        <div className="p-2 bg-slate-950 rounded-xl border border-slate-800 group-hover:border-blue-500/20 transition-colors shadow-inner">
+          {icon}
+        </div>
+      </div>
+      <div>
+        <div className="flex items-baseline gap-2 mb-2">
+          <p className={`text-3xl font-black leading-none tracking-tighter ${colorClass} drop-shadow-sm`}>
+            {value}
+          </p>
+          {status && (
+            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${colorClass} bg-white/5 border border-white/5`}>
+              {status}
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-slate-500 font-bold tracking-tight italic opacity-70">
+          {subtitle}
+        </p>
+      </div>
     </div>
   );
 }
 
 function ResourceItem({ label, value }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-[10px] text-slate-500 font-bold tracking-tight uppercase leading-none">{label}</p>
-      <p className="text-xl font-black text-slate-100 leading-none">{value ?? 0}</p>
+    <div className="space-y-2">
+      <p className="text-[11px] text-slate-400 font-black tracking-widest uppercase leading-none">{label}</p>
+      <p className="text-2xl font-black text-emerald-400 leading-none drop-shadow-[0_0_10px_rgba(52,211,153,0.1)]">{value ?? 0}</p>
     </div>
   );
 }

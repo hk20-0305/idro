@@ -107,14 +107,7 @@ public class ImpactAnalysisService {
             // ============================================================
             response.setCampAnalysisList(campAnalyses);
 
-            // Calculate Overall Risk Score
-            double avgRisk = campAnalyses.stream()
-                    .mapToDouble(CampAiAnalysis::getRiskScore)
-                    .average()
-                    .orElse(0.0);
-            response.setOverallRiskScore(Math.round(avgRisk * 100.0) / 100.0);
-
-            logger.info("✅ Analysis complete. Risk Score: {}", response.getOverallRiskScore());
+            logger.info("✅ Analysis complete for mission {}", missionId);
 
         } catch (Exception e) {
             logger.error("Error during impact analysis: {}", e.getMessage(), e);
@@ -164,7 +157,6 @@ public class ImpactAnalysisService {
 
             // 2. Rule Engine Calculation (Source of Truth for quantities)
             com.india.idro.dto.CampRequirementDTO ruleResult = ruleBasedCalculator.calculateRequirements(camp);
-            int finalRisk = riskScoreCalculator.calculateRuleRisk(camp, supplyHours);
 
             // 3. Initialize Analysis DTO
             CampAiAnalysis analysis = new CampAiAnalysis();
@@ -188,8 +180,6 @@ public class ImpactAnalysisService {
             analysis.setVolunteers(ruleResult.getVolunteersRequired());
             analysis.setAmbulances((int) Math.ceil(injured / 4.0));
 
-            analysis.setRiskScore((double) finalRisk);
-
             // 5. Generate Concise, Rule-Based Explanations
             analysis.setExplanations(generateRuleExplanations(camp, ruleResult, urgencyStr));
 
@@ -207,23 +197,12 @@ public class ImpactAnalysisService {
                 AiPredictionResponseDTO mlResponse = mlPredictionService.predict(request);
 
                 if (mlResponse != null && mlResponse.getRequirements() != null) {
-                    // --- Hybrid Safety Overrides ---
-                    // Food/Water/Beds/Medical Kits/Ambulances are strictly FORMULA based (Step 4
-                    // above)
-
-                    if (mlResponse.getRiskScore() != null) {
-                        analysis.setRiskScore((analysis.getRiskScore() + mlResponse.getRiskScore()) / 2.0);
-                    }
-
                     analysis.setPredictionSource("Hybrid AI");
                 }
             } catch (Exception mlEx) {
                 logger.warn("ML fallback to Rule Engine for camp {}: {}", camp.getId(), mlEx.getMessage());
                 analysis.setPredictionSource("Rule Engine");
             }
-
-            // 8. Calculate Supply Saturation (Consumption Progress)
-            analysis.setSaturationPercentage(calculateSaturation(supplyHours));
 
             // 9. Persist Prediction (mapped back to entity fields)
             savePrediction(mission.getId(), camp.getId(), analysis, ruleResult);
@@ -234,37 +213,6 @@ public class ImpactAnalysisService {
             logger.error("Failed to process camp {}: {}", camp.getId(), e.getMessage());
         }
         return null;
-    }
-
-    /**
-     * Calculates Saturation as "Consumption Progress" based on supply window.
-     * Logic:
-     * - Immediate (0h) -> 100% (Critical)
-     * - 6 Hours -> 75%
-     * - 12 Hours -> 50%
-     * - 24 Hours -> 0% (Safe)
-     */
-    private double calculateSaturation(int supplyHours) {
-        if (supplyHours <= 0)
-            return 100.0;
-        if (supplyHours >= 24)
-            return 0.0;
-
-        // Linear mapping: 100 * (1 - Hours/24)
-        return Math.max(0.0, Math.min(100.0, 100.0 * (1.0 - (double) supplyHours / 24.0)));
-    }
-
-    /**
-     * Maps numerical risk score (0-100) to human-readable operational level.
-     */
-    private String mapRiskScoreToLevel(double score) {
-        if (score >= 81)
-            return "CRITICAL";
-        if (score >= 61)
-            return "HIGH";
-        if (score >= 31)
-            return "MEDIUM";
-        return "LOW";
     }
 
     /**
@@ -317,8 +265,6 @@ public class ImpactAnalysisService {
             entity.setToilets(rules.getToiletsRequired());
 
             // From Analysis/Rule result
-            entity.setRiskScore(analysis.getRiskScore());
-            entity.setRiskLevel(analysis.getRiskLevel());
             entity.setUrgency(analysis.getUrgency());
             entity.setPredictionSource(analysis.getPredictionSource());
             entity.setExplanations(analysis.getExplanations());

@@ -25,14 +25,9 @@ public class CampAiAnalysis {
     private int ambulances;
 
     // Derived Status
-    private String riskLevel; // LOW, MEDIUM, HIGH, CRITICAL
     private String urgency;
-
-    @com.fasterxml.jackson.annotation.JsonProperty("saturationPercentage")
-    private double saturationPercentage; // 0.0 - 100.0
 
     // Metadata
     private String predictionSource;
-    private double riskScore;
     private List<String> explanations;
 }

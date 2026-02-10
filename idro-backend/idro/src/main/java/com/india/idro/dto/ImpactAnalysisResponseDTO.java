@@ -16,6 +16,5 @@ public class ImpactAnalysisResponseDTO {
     private String missionId;
     private String disasterType;
     private String severity;
-    private double overallRiskScore;
     private List<CampAiAnalysis> campAnalysisList = new ArrayList<>();
 }

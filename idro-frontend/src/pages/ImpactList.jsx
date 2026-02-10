@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, BarChart3, XCircle } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, Trash2, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { idroApi } from "../services/api"; // Import Real API
@@ -16,7 +16,12 @@ export default function ImpactList() {
           setLoading(true);
         }
         const res = await idroApi.getAlerts();
-        const active = res.data.filter(d => d.missionStatus === 'OPEN');
+        // Normalize MongoDB _id → id
+        const normalized = res.data.map(item => ({
+          ...item,
+          id: item.id || item._id
+        }));
+        const active = normalized.filter(d => d.missionStatus === 'OPEN');
         setDisasters(active);
         setError(null);
       } catch (err) {
@@ -37,6 +42,21 @@ export default function ImpactList() {
 
     return () => clearInterval(interval); // cleanup
   }, []);
+
+  const handleDelete = async (e, id) => {
+    e.stopPropagation(); // Avoid navigating to details
+    if (!id) return;
+
+    if (window.confirm("⚠️ This will PERMANENTLY DELETE this disaster and its analysis data. Proceed?")) {
+      try {
+        await idroApi.deleteAlert(id);
+        setDisasters(prev => prev.filter(d => d.id !== id));
+      } catch (err) {
+        console.error("Delete failed", err);
+        alert("Failed to delete disaster. Is server reachable?");
+      }
+    }
+  };
 
 
   return (
@@ -97,7 +117,16 @@ export default function ImpactList() {
                     }`}>
                     {disaster.type}
                   </span>
-                  <span className="text-[10px] text-slate-500 font-bold tracking-tighter uppercase">{disaster.time || "Real-Time"}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-slate-500 font-bold tracking-tighter uppercase">{disaster.time || "Real-Time"}</span>
+                    <button
+                      onClick={(e) => handleDelete(e, disaster.id)}
+                      className="p-2 bg-slate-950/50 hover:bg-rose-500/20 border border-white/5 hover:border-rose-500/50 rounded-lg text-slate-500 hover:text-rose-400 transition-all z-20"
+                      title="Permanently Delete Disaster"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 <div>

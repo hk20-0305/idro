@@ -328,23 +328,9 @@ export default function IdroHome() {
               <span className="text-[10px] text-blue-400 font-bold animate-pulse">LIVE</span>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
-              {alerts.length === 0 && <div className="p-4 text-center text-slate-500 text-xs italic">Scanning...</div>}
-
-              {alerts.map((alert) => (
-                <div key={alert.id} className="p-3 bg-white/5 hover:bg-white/10 rounded border-l-2 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border ${alert.trustScore > 75
-                      ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                      : 'bg-orange-500/20 text-orange-400 border-orange-500/30'
-                      }`}>
-                      {alert.trustScore > 75 ? 'DETECTED' : 'PRE ' + alert.type}
-                    </span>
-                    <span className="text-[9px] text-slate-500 font-mono">NOW</span>
-                  </div>
-                  <h3 className="font-bold text-slate-200 text-xs mb-1 line-clamp-1">{alert.location}</h3>
-                  <p className="text-[10px] text-slate-400 line-clamp-2">{alert.details}</p>
-                </div>
-              ))}
+              <div className="p-4 text-center text-slate-500 text-xs italic">
+                System on Standby. Sequential Intel Feed offline.
+              </div>
             </div>
           </div>
 

@@ -118,15 +118,22 @@ export default function ActiveDisasters() {
               </div>
 
               <div className="relative z-10">
-                <div className="mb-4">
+                <div className="flex justify-between items-start mb-4">
                   <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${(d.urgency === "Immediate" || d.urgency === "High" || d.color === "RED")
-                      ? "bg-red-600 text-white border-red-400"
-                      : (d.urgency === "Medium" || d.color === "ORANGE")
-                        ? "bg-yellow-500 text-black border-yellow-400"
-                        : "bg-green-600 text-white border-green-400"
+                    ? "bg-red-600 text-white border-red-400"
+                    : (d.urgency === "Medium" || d.color === "ORANGE")
+                      ? "bg-yellow-500 text-black border-yellow-400"
+                      : "bg-green-600 text-white border-green-400"
                     }`}>
                     {d.urgency ? d.urgency.toUpperCase() : (d.color === "RED" ? "CRITICAL ALERT" : "WARNING")}
                   </span>
+                  <button
+                    onClick={(e) => handleDelete(e, d.id)}
+                    className="p-2 bg-slate-900/50 hover:bg-red-600/20 border border-white/10 hover:border-red-500/50 rounded-lg text-slate-500 hover:text-red-400 transition-all z-20"
+                    title="Delete Disaster"
+                  >
+                    <TriangleAlert size={14} className="rotate-180" />
+                  </button>
                 </div>
 
                 <h2 className="text-2xl font-bold mb-3 group-hover:text-blue-300 transition-colors">

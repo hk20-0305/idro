@@ -76,13 +76,11 @@ public class AlertController {
 
     // 3. Delete Alert
     @DeleteMapping("/{id}")
-    public Alert closeAlert(@PathVariable String id) {
-        return alertRepository.findById(id)
-                .map(alert -> {
-                    alert.setMissionStatus("CLOSED");
-                    return alertRepository.save(alert);
-                })
-                .orElseThrow(() -> new RuntimeException("Alert not found"));
+    public void deleteAlert(@PathVariable String id) {
+        if (!alertRepository.existsById(id)) {
+            throw new RuntimeException("Alert not found");
+        }
+        alertRepository.deleteById(id);
     }
 
     // ✅ 4. NEW: Assign Mission (Locks the task for an NGO)

@@ -1,13 +1,17 @@
 package com.india.idro.dto;
 
+import java.time.LocalDateTime;
+
 import com.india.idro.model.Stock;
 import com.india.idro.model.enums.CampStatus;
-import jakarta.validation.constraints.*;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -30,6 +34,11 @@ public class CampDTO {
     @NotNull(message = "Population is required")
     @Min(value = 0, message = "Population must be positive")
     private Integer population;
+
+    @Min(value = 0, message = "Injured count must be at least 0")
+    private Integer injuredCount;
+
+    private boolean medicinesNeeded;
 
     private Stock stock;
 

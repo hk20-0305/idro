@@ -124,8 +124,8 @@ export default function VolunteerForm() {
   };
 
   const addCamp = () => {
-    // Added urgency field to new camp object
-    setCamps([...camps, { name: "", location: "", currentPeople: "", people: "", needs: [], urgency: "" }]);
+    // Added injuredCount and urgency fields to new camp object
+    setCamps([...camps, { name: "", location: "", currentPeople: "", injuredCount: "", people: "", needs: [], urgency: "" }]);
   };
 
   const updateCamp = (index, field, value) => {
@@ -149,6 +149,14 @@ export default function VolunteerForm() {
     if (!form.latitude || !form.longitude || !form.type || !form.severity) {
       alert("Please fill Latitude, Longitude, Type and Severity");
       return;
+    }
+
+    // Camp Validations
+    for (const camp of camps) {
+      if (Number(camp.injuredCount) > Number(camp.currentPeople)) {
+        alert(`Camp "${camp.name || 'Unnamed'}": Injured people (${camp.injuredCount}) cannot exceed current people (${camp.currentPeople}).`);
+        return;
+      }
     }
 
     const payload = {
@@ -192,7 +200,9 @@ export default function VolunteerForm() {
         await idroApi.createCamp({
           name: camp.name,
           location: camp.location,
-          population: Number(camp.people) || 0,
+          population: Number(camp.currentPeople) || 0,
+          injuredCount: Number(camp.injuredCount) || 0,
+          medicinesNeeded: camp.needs.includes("Medicines"),
           latitude: Number(form.latitude),
           longitude: Number(form.longitude),
           alertId: alertId,
@@ -203,8 +213,6 @@ export default function VolunteerForm() {
             medicine: camp.needs.includes("Medicines") ? "Available" : "Low"
           }
         });
-
-
       }
 
       alert("✅ Submitted successfully");
@@ -451,7 +459,7 @@ export default function VolunteerForm() {
               key={index}
               className="bg-[#0f172a] border border-white/10 p-4 rounded-xl space-y-3"
             >
-              <div className="grid grid-cols-5 gap-4"> {/* Increased cols for urgency */}
+              <div className="grid grid-cols-6 gap-4"> {/* Increased cols for urgency and injured */}
                 <input
                   placeholder="Camp Name"
                   value={camp.name}
@@ -472,6 +480,14 @@ export default function VolunteerForm() {
                   value={camp.currentPeople || ''}
                   onChange={(e) => updateCamp(index, "currentPeople", e.target.value)}
                   className="bg-slate-900 p-2 rounded border border-slate-600"
+                />
+
+                <input
+                  placeholder="Injured People"
+                  type="number"
+                  value={camp.injuredCount || ''}
+                  onChange={(e) => updateCamp(index, "injuredCount", e.target.value)}
+                  className="bg-slate-900 p-2 rounded border border-slate-600 border-red-500/50"
                 />
 
                 <input

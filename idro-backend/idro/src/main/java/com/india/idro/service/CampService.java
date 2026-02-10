@@ -1,15 +1,17 @@
 package com.india.idro.service;
 
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
 import com.india.idro.exception.ResourceNotFoundException;
 import com.india.idro.model.Camp;
 import com.india.idro.model.Stock;
 import com.india.idro.model.enums.CampStatus;
 import com.india.idro.repository.CampRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +21,12 @@ public class CampService {
 
     // Create new camp
     public Camp createCamp(Camp camp) {
+        // Validation: Injured count cannot exceed population
+        if (camp.getPopulation() != null) {
+            if (camp.getInjuredCount() > camp.getPopulation()) {
+                throw new IllegalArgumentException("Injured count cannot exceed current population");
+            }
+        }
         return campRepository.save(camp);
     }
 
@@ -60,12 +68,21 @@ public class CampService {
 
     // Update camp
     public Camp updateCamp(String id, Camp updatedCamp) {
+        // Validation: Injured count cannot exceed population
+        if (updatedCamp.getPopulation() != null) {
+            if (updatedCamp.getInjuredCount() > updatedCamp.getPopulation()) {
+                throw new IllegalArgumentException("Injured count cannot exceed current population");
+            }
+        }
+
         return campRepository.findById(id)
                 .map(existingCamp -> {
                     existingCamp.setName(updatedCamp.getName());
                     existingCamp.setStatus(updatedCamp.getStatus());
                     existingCamp.setUrgencyScore(updatedCamp.getUrgencyScore());
                     existingCamp.setPopulation(updatedCamp.getPopulation());
+                    existingCamp.setInjuredCount(updatedCamp.getInjuredCount());
+                    existingCamp.setMedicinesNeeded(updatedCamp.isMedicinesNeeded());
                     existingCamp.setStock(updatedCamp.getStock());
                     existingCamp.setIncomingAid(updatedCamp.getIncomingAid());
                     existingCamp.setImage(updatedCamp.getImage());

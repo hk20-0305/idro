@@ -40,13 +40,13 @@ public class AiPredictionResponseDTO {
     @AllArgsConstructor
     public static class AiRequirementsDTO {
 
-        @JsonProperty("food_packets_per_day")
+        @JsonProperty("food_packets")
         private int foodPacketsPerDay;
 
-        @JsonProperty("water_liters_per_day")
+        @JsonProperty("water_liters")
         private int waterLitersPerDay;
 
-        @JsonProperty("medical_kits_required")
+        @JsonProperty("medical_kits")
         private int medicalKitsRequired;
 
         @JsonProperty("beds_required")

@@ -20,6 +20,9 @@ import com.india.idro.model.CampAiPrediction;
 import com.india.idro.repository.AlertRepository;
 import com.india.idro.repository.CampAiPredictionRepository;
 import com.india.idro.repository.CampRepository;
+import com.india.idro.service.ai.rules.RiskScoreCalculator;
+import com.india.idro.service.ai.rules.RuleBasedRequirementCalculator;
+import com.india.idro.service.ai.rules.UrgencyEvaluator;
 
 /**
  * Service to orchestrate AI-driven impact analysis.
@@ -136,33 +139,96 @@ public class ImpactAnalysisService {
     /**
      * Process a single camp: Predict -> Save -> Map
      */
+    @Autowired
+    private RuleBasedRequirementCalculator ruleBasedCalculator;
+
+    @Autowired
+    private UrgencyEvaluator urgencyEvaluator;
+
+    @Autowired
+    private RiskScoreCalculator riskScoreCalculator;
+
+    /**
+     * Process a single camp: Rule Engine (Primary) + ML (Metadata)
+     */
     private CampAiAnalysis processCamp(Camp camp, Alert mission) {
         try {
-            // Build Request DTO
-            AiPredictionRequestDTO request = new AiPredictionRequestDTO();
-
-            // Mission Context
-            request.setDisasterType(mission.getType() != null ? mission.getType().toString() : "Unknown");
-            request.setSeverity(mission.getMagnitude() != null ? mission.getMagnitude() : "Moderate");
-            request.setUrgency(mission.getUrgency() != null ? mission.getUrgency() : "Medium");
-
-            // Camp Context
-            request.setAffectedCount(camp.getPopulation() != null ? camp.getPopulation() : 0);
-            request.setInjuredCount(0); // Camps focus on displaced
-            request.setMissingCount(0);
-            request.setLatitude(camp.getLatitude() != null ? camp.getLatitude() : 0.0);
-            request.setLongitude(camp.getLongitude() != null ? camp.getLongitude() : 0.0);
-
-            // Call ML Service
-            AiPredictionResponseDTO mlResponse = mlPredictionService.predict(request);
-
-            if (mlResponse != null) {
-                // Save to DB
-                savePrediction(mission.getId(), camp.getId(), mlResponse);
-
-                // Map to Analysis Model
-                return mapToAnalysis(camp, mlResponse);
+            // 1. Context Setup
+            String urgencyStr = camp.getUrgency();
+            if (urgencyStr == null || urgencyStr.isEmpty()) {
+                urgencyStr = mission.getUrgency() != null ? mission.getUrgency() : "24 Hours";
             }
+            camp.setSeverity(mission.getMagnitude());
+            // No longer overriding camp.urgency here as it's the field's data source
+            int supplyHours = urgencyEvaluator.convertUrgencyToHours(urgencyStr);
+
+            // 2. Rule Engine Calculation (Source of Truth for quantities)
+            com.india.idro.dto.CampRequirementDTO ruleResult = ruleBasedCalculator.calculateRequirements(camp);
+            int finalRisk = riskScoreCalculator.calculateRuleRisk(camp, supplyHours);
+
+            // 3. Initialize Analysis DTO
+            CampAiAnalysis analysis = new CampAiAnalysis();
+            analysis.setCampId(camp.getId());
+            analysis.setCampName(camp.getName());
+            analysis.setPopulation(camp.getPopulation() != null ? camp.getPopulation() : 0);
+            analysis.setInjuredCount(camp.getInjuredCount());
+            analysis.setUrgency(urgencyStr);
+
+            // 4. Strict Operational Requirements (Single Source of Truth - Mandated
+            // Formulas)
+            int population = analysis.getPopulation();
+            int injured = analysis.getInjuredCount();
+
+            analysis.setFoodPackets(population * 3);
+            analysis.setWaterLiters(population * 5);
+            analysis.setBeds(injured);
+            analysis.setMedicalKits((int) Math.ceil(injured / 2.0));
+
+            // Rule Engine base for others
+            analysis.setVolunteers(ruleResult.getVolunteersRequired());
+            analysis.setAmbulances((int) Math.ceil(injured / 4.0));
+
+            analysis.setRiskScore((double) finalRisk);
+
+            // 5. Generate Concise, Rule-Based Explanations
+            analysis.setExplanations(generateRuleExplanations(camp, ruleResult, urgencyStr));
+
+            // 6. ML Call & Hybrid Integration (Safety-First Merging)
+            try {
+                AiPredictionRequestDTO request = new AiPredictionRequestDTO();
+                request.setDisasterType(mission.getType() != null ? mission.getType().toString() : "Unknown");
+                request.setSeverity(mission.getMagnitude() != null ? mission.getMagnitude() : "Moderate");
+                request.setUrgency(mission.getUrgency() != null ? mission.getUrgency() : "Medium");
+                request.setAffectedCount(population);
+                request.setInjuredCount(injured);
+                request.setLatitude(camp.getLatitude() != null ? camp.getLatitude() : 0.0);
+                request.setLongitude(camp.getLongitude() != null ? camp.getLongitude() : 0.0);
+
+                AiPredictionResponseDTO mlResponse = mlPredictionService.predict(request);
+
+                if (mlResponse != null && mlResponse.getRequirements() != null) {
+                    // --- Hybrid Safety Overrides ---
+                    // Food/Water/Beds/Medical Kits/Ambulances are strictly FORMULA based (Step 4
+                    // above)
+
+                    if (mlResponse.getRiskScore() != null) {
+                        analysis.setRiskScore((analysis.getRiskScore() + mlResponse.getRiskScore()) / 2.0);
+                    }
+
+                    analysis.setPredictionSource("Hybrid AI");
+                }
+            } catch (Exception mlEx) {
+                logger.warn("ML fallback to Rule Engine for camp {}: {}", camp.getId(), mlEx.getMessage());
+                analysis.setPredictionSource("Rule Engine");
+            }
+
+            // 8. Calculate Supply Saturation (Consumption Progress)
+            analysis.setSaturationPercentage(calculateSaturation(supplyHours));
+
+            // 9. Persist Prediction (mapped back to entity fields)
+            savePrediction(mission.getId(), camp.getId(), analysis, ruleResult);
+
+            return analysis;
 
         } catch (Exception e) {
             logger.error("Failed to process camp {}: {}", camp.getId(), e.getMessage());
@@ -171,61 +237,96 @@ public class ImpactAnalysisService {
     }
 
     /**
+     * Calculates Saturation as "Consumption Progress" based on supply window.
+     * Logic:
+     * - Immediate (0h) -> 100% (Critical)
+     * - 6 Hours -> 75%
+     * - 12 Hours -> 50%
+     * - 24 Hours -> 0% (Safe)
+     */
+    private double calculateSaturation(int supplyHours) {
+        if (supplyHours <= 0)
+            return 100.0;
+        if (supplyHours >= 24)
+            return 0.0;
+
+        // Linear mapping: 100 * (1 - Hours/24)
+        return Math.max(0.0, Math.min(100.0, 100.0 * (1.0 - (double) supplyHours / 24.0)));
+    }
+
+    /**
+     * Maps numerical risk score (0-100) to human-readable operational level.
+     */
+    private String mapRiskScoreToLevel(double score) {
+        if (score >= 81)
+            return "CRITICAL";
+        if (score >= 61)
+            return "HIGH";
+        if (score >= 31)
+            return "MEDIUM";
+        return "LOW";
+    }
+
+    /**
+     * Generates concise, operational, human-readable bullet points based on rules.
+     */
+    private List<String> generateRuleExplanations(Camp camp, com.india.idro.dto.CampRequirementDTO rules,
+            String urgency) {
+        List<String> explanations = new ArrayList<>();
+
+        // Rule 1: Always mention affected people count
+        int population = camp.getPopulation() != null ? camp.getPopulation() : 0;
+        explanations.add(population + " people require daily food and water support");
+
+        // Rule 2: Mention injured count only if injured > 0
+        if (camp.getInjuredCount() > 0) {
+            String medSuffix = rules.getMedicalKitsRequired() > 0 ? " and medical kits" : "";
+            explanations.add(camp.getInjuredCount() + " injured require beds" + medSuffix);
+        }
+
+        // Rule 3: Mention urgency level
+        explanations.add("Urgency level: " + urgency.toUpperCase());
+
+        // Rule 4: Mention ambulance recommendation only if ambulances > 0
+        if (rules.getAmbulancesRequired() > 0) {
+            explanations.add("Ambulance support required for injured patients");
+        }
+
+        return explanations;
+    }
+
+    /**
      * Persist prediction to database
      */
-    private void savePrediction(String missionId, String campId, AiPredictionResponseDTO mlResponse) {
+    private void savePrediction(String missionId, String campId, CampAiAnalysis analysis,
+            com.india.idro.dto.CampRequirementDTO rules) {
         try {
             CampAiPrediction entity = new CampAiPrediction();
             entity.setMissionId(missionId);
             entity.setCampId(campId);
 
-            if (mlResponse.getRequirements() != null) {
-                var req = mlResponse.getRequirements();
-                entity.setFoodPerDay(req.getFoodPacketsPerDay());
-                entity.setWaterPerDay(req.getWaterLitersPerDay());
-                entity.setMedicalKits(req.getMedicalKitsRequired());
-                entity.setBeds(req.getBedsRequired());
-                entity.setBlankets(req.getBlanketsRequired());
-                entity.setToilets(req.getToiletsRequired());
-                entity.setPowerUnits(req.getPowerUnitsRequired());
-                entity.setAmbulances(req.getAmbulancesRequired());
-                entity.setVolunteers(req.getVolunteersRequired());
-            }
+            // Quantities from internal Rules (SSoT Mandated)
+            entity.setFoodPerDay(analysis.getFoodPackets());
+            entity.setWaterPerDay(analysis.getWaterLiters());
+            entity.setMedicalKits(analysis.getMedicalKits());
+            entity.setBeds(analysis.getBeds());
+            entity.setAmbulances(analysis.getAmbulances());
+            entity.setVolunteers(analysis.getVolunteers());
 
-            entity.setRiskScore(mlResponse.getRiskScore());
-            entity.setPredictionSource(mlResponse.getPredictionSource());
-            entity.setExplanations(mlResponse.getExplanations());
+            // Toilets still come from rules (no mandated formula yet)
+            entity.setToilets(rules.getToiletsRequired());
+
+            // From Analysis/Rule result
+            entity.setRiskScore(analysis.getRiskScore());
+            entity.setRiskLevel(analysis.getRiskLevel());
+            entity.setUrgency(analysis.getUrgency());
+            entity.setPredictionSource(analysis.getPredictionSource());
+            entity.setExplanations(analysis.getExplanations());
 
             predictionRepository.save(entity);
 
         } catch (Exception e) {
-            logger.error("Error saving prediction: {}", e.getMessage());
+            logger.error("Error saving prediction for camp {}: {}", campId, e.getMessage());
         }
-    }
-
-    /**
-     * Map ML response to CampAiAnalysis model
-     */
-    private CampAiAnalysis mapToAnalysis(Camp camp, AiPredictionResponseDTO mlResponse) {
-        CampAiAnalysis analysis = new CampAiAnalysis();
-        analysis.setCampId(camp.getId());
-        analysis.setCampName(camp.getName());
-
-        if (mlResponse.getRequirements() != null) {
-            var req = mlResponse.getRequirements();
-            analysis.setPredictedFood(req.getFoodPacketsPerDay());
-            analysis.setPredictedWater(req.getWaterLitersPerDay());
-            analysis.setPredictedBeds(req.getBedsRequired());
-            analysis.setPredictedMedicalKits(req.getMedicalKitsRequired());
-            analysis.setPredictedVolunteers(req.getVolunteersRequired());
-            analysis.setPredictedAmbulances(req.getAmbulancesRequired());
-        }
-
-        analysis.setRiskScore(mlResponse.getRiskScore() != null ? mlResponse.getRiskScore() : 0.0);
-        analysis.setPredictionSource(mlResponse.getPredictionSource());
-        analysis.setExplanations(
-                mlResponse.getExplanations() != null ? mlResponse.getExplanations() : new ArrayList<>());
-
-        return analysis;
     }
 }

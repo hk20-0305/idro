@@ -1,7 +1,6 @@
 package com.india.idro.config;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -34,6 +33,7 @@ public class DataSeeder implements CommandLineRunner {
         seedCamps();
     }
 
+    @SuppressWarnings("null")
     private void seedUsers() {
         if (userRepository.count() == 0) {
             System.out.println("🌱 No users found. Creating default admin users...");
@@ -42,7 +42,7 @@ public class DataSeeder implements CommandLineRunner {
             User ngo = new User("ngo", "Red Cross Logistics", "contact@ngo.org", "ngo", UserRole.NGO);
             User vol = new User("hero", "Rahul Volunteer", "hero@gmail.com", "hero", UserRole.VOLUNTEER);
 
-            userRepository.saveAll(Arrays.asList(gov, ngo, vol));
+            userRepository.saveAll(java.util.List.of(gov, ngo, vol));
 
             System.out.println("✅ Default Users Created in MongoDB!");
         } else {
@@ -50,6 +50,7 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
+    @SuppressWarnings("null")
     private void seedAlerts() {
         if (alertRepository.count() == 0) {
             System.out.println("🌱 No alerts found. Creating demo alerts...");
@@ -116,7 +117,7 @@ public class DataSeeder implements CommandLineRunner {
             landslide.setCreatedAt(LocalDateTime.now().minusHours(5));
             landslide.setResponderName("Local Fire Dept");
 
-            alertRepository.saveAll(Arrays.asList(flood, cyclone, landslide));
+            alertRepository.saveAll(java.util.List.of(flood, cyclone, landslide));
 
             System.out.println("✅ Default Alerts Created in MongoDB!");
         } else {
@@ -139,10 +140,20 @@ public class DataSeeder implements CommandLineRunner {
                 com.india.idro.model.Camp camp1 = new com.india.idro.model.Camp();
                 camp1.setName(baseName + " Relief Camp A");
                 camp1.setLocation(alert.getLocation());
-                camp1.setLatitude(alert.getLatitude() + 0.01); // Slightly offset
+                camp1.setLatitude(alert.getLatitude() + 0.01);
                 camp1.setLongitude(alert.getLongitude() + 0.01);
                 camp1.setCapacity(1000);
-                camp1.setPopulation(500);
+                camp1.setPopulation(300);
+                camp1.setInjuredCount(0);
+                camp1.setUrgency("24 HOURS");
+
+                // Add varied stock for visualization
+                com.india.idro.model.Stock stock1 = new com.india.idro.model.Stock();
+                stock1.setFood("MODERATE");
+                stock1.setWater("LOW");
+                stock1.setMedicine("CRITICAL");
+                camp1.setStock(stock1);
+
                 camp1.setAlertId(alert.getId());
                 camps.add(camp1);
 
@@ -154,7 +165,16 @@ public class DataSeeder implements CommandLineRunner {
                     camp2.setLatitude(alert.getLatitude() - 0.01);
                     camp2.setLongitude(alert.getLongitude() - 0.01);
                     camp2.setCapacity(800);
-                    camp2.setPopulation(350);
+                    camp2.setPopulation(500);
+                    camp2.setInjuredCount(12);
+                    camp2.setUrgency("6 HOURS");
+
+                    com.india.idro.model.Stock stock2 = new com.india.idro.model.Stock();
+                    stock2.setFood("MODERATE");
+                    stock2.setWater("MODERATE");
+                    stock2.setMedicine("FULL");
+                    camp2.setStock(stock2);
+
                     camp2.setAlertId(alert.getId());
                     camps.add(camp2);
                 }

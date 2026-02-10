@@ -111,9 +111,15 @@ public class CampAiPrediction {
      */
     private Double riskScore;
 
+    private String riskLevel;
+
+    /**
+     * Urgency level from mission/rule engine
+     */
+    private String urgency;
+
     /**
      * Source of prediction: "ML" or "Fallback"
-     * Indicates whether ML model was used or rule-based fallback
      */
     private String predictionSource;
 

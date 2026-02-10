@@ -13,17 +13,26 @@ public class CampAiAnalysis {
 
     private String campId;
     private String campName;
+    private int population;
+    private int injuredCount;
 
-    // Resource Predictions
-    private int predictedFood;
-    private int predictedWater;
-    private int predictedBeds;
-    private int predictedMedicalKits;
-    private int predictedVolunteers;
-    private int predictedAmbulances;
+    // Strict Operational Requirements (Single Source of Truth)
+    private int foodPackets;
+    private int waterLiters;
+    private int beds;
+    private int medicalKits;
+    private int volunteers;
+    private int ambulances;
+
+    // Derived Status
+    private String riskLevel; // LOW, MEDIUM, HIGH, CRITICAL
+    private String urgency;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("saturationPercentage")
+    private double saturationPercentage; // 0.0 - 100.0
 
     // Metadata
-    private String predictionSource; // "ML" or "Fallback"
+    private String predictionSource;
     private double riskScore;
     private List<String> explanations;
 }

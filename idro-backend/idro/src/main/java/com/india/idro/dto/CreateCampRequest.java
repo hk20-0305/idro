@@ -33,6 +33,11 @@ public class CreateCampRequest {
     @Min(value = 0, message = "Population must be positive")
     private Integer population;
 
+    @Min(value = 0, message = "Injured count must be at least 0")
+    private Integer injuredCount;
+
+    private boolean medicinesNeeded;
+
     private Stock stock;
 
     private String incomingAid;
